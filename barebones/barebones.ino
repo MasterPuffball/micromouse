@@ -2,6 +2,7 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include <DRV8835MotorShield.h>
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
@@ -12,8 +13,9 @@ bool screen_initialised = true;
 int curTime = 0;
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+DRV8835MotorShield motors;
 
-void init_screen() {
+void initScreen() {
   if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
     Serial.println(F("SSD1306 allocation failed"));
     screen_initialised = false;
@@ -34,10 +36,17 @@ void drawString(String string) {
   display.display();
 }
 
+void initMotors() {
+  // uncomment one or both of the following lines if your motors' directions need to be flipped
+  //motors.flipM1(true);
+  //motors.flipM2(true);
+}
+
 void setup() {
   Serial.begin(9600);
 
-  init_screen();
+  initScreen();
+  initMotors();
 }
 
 void loop() {
@@ -45,6 +54,19 @@ void loop() {
     curTime = millis();
     drawString(String(curTime));
   }
-}
 
+  for (int speed = 0; speed <= 400; speed++)
+  {
+    motors.setM1Speed(speed);
+    motors.setM2Speed(speed);
+    delay(2);
+  }
+
+  for (int speed = 400; speed >= 0; speed--)
+  {
+    motors.setM1Speed(speed);
+    motors.setM2Speed(speed);
+    delay(2);
+  }
+}
 
