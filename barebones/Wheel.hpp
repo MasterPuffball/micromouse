@@ -10,20 +10,22 @@
 namespace mtrn3100 {
   class Wheel {
     public:
-        Wheel(mtrn3100::PIDController controller, mtrn3100::Motor motor, mtrn3100::Encoder encoder) :  controller(controller), motor(motor), encoder(encoder) {
+        Wheel(mtrn3100::PIDController* controller, mtrn3100::Motor* motor, mtrn3100::Encoder* encoder) :  controller(controller), motor(motor), encoder(encoder) {
+        }
+
+        void setTarget(int16_t dist) {
+          controller->zeroAndSetTarget(getDistanceMoved(), dist);
         }
 
         void moveDistanceMillis(int16_t dist) {
-          controller.zeroAndSetTarget(getDistanceMoved(), dist);
-
           if (!isFinishedMove()) {
             float pos = getDistanceMoved();
-            float intendedSignal = controller.compute(pos);
+            float intendedSignal = controller->compute(pos);
             Serial.println(String("Intended: ") + intendedSignal);
-            Serial.println(String("Pos: ") + encoder.getRotationDegrees());
+            Serial.println(String("Pos: ") + controller->getError());
 
-            motor.setSpeed(intendedSignal);
-            if (controller.getError() < tolerance) {
+            motor->setSpeed(intendedSignal);
+            if (controller->getError() < tolerance) {
               countWithinTolerance++;
             }
             else {
@@ -41,17 +43,18 @@ namespace mtrn3100 {
         }
 
         float getDistanceMoved() {
-          return (distanceMoved  = (encoder.getRotationDegrees() * wheel_diam)/360);
+          return (distanceMoved  = (encoder->getRotationDegrees()/360) * wheel_diam);
         }
 
     private:
-        const mtrn3100::PIDController controller;
-        const mtrn3100::Motor motor;
-        const mtrn3100::Encoder encoder;
+        const mtrn3100::PIDController* controller;
+        const mtrn3100::Motor* motor;
+        const mtrn3100::Encoder* encoder;
         float distanceMoved = 0;
         const float wheel_diam = 32; //In millis
-        const int acceptableCounts = 10;
-        const float tolerance = 0.1;
+        const int acceptableCounts = 200;
+        const float tolerance = 0.01;
         int countWithinTolerance = 0;
+        bool hasStartedMove = false;
   };
 }

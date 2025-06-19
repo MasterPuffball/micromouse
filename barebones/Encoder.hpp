@@ -36,10 +36,10 @@ public:
         int read = digitalRead(encoder2_pin);
         
         if (read == LOW) {
-          count += 1;
+          count += (isFlipped == true ? -1 : 1);
         }
         else if (read == HIGH) {
-          count -= 1;
+          count -= (isFlipped == true ? -1 : 1);
         }
       
         interrupts();
@@ -52,6 +52,10 @@ public:
 
     float getRotationDegrees() {
         return ((count*360)/counts_per_revolution);
+    }
+
+    void flip() {
+      isFlipped = !isFlipped;
     }
 
 private:
@@ -75,6 +79,7 @@ public:
     volatile long count = 0;
     uint32_t prev_time;
     bool read = false;
+    bool isFlipped = false;
 
 private:
     static Encoder* instance1;

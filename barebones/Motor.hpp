@@ -18,8 +18,10 @@ public:
     // Sets pwm directly
     void setPWM(int16_t pwm) {
         analogWrite(pwm_pin, min(abs(pwm), 255));
-        digitalWrite(dir_pin, (pwm * isFlipped < 0 ? LOW : HIGH));
-        // Serial.println(isFlipped);
+        if (isFlipped) {
+          pwm = -pwm;
+        }
+        digitalWrite(dir_pin, (pwm < 0 ? LOW : HIGH));
     }
 
     // Takes a percentage speed
