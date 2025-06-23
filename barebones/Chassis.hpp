@@ -19,9 +19,12 @@ namespace mtrn3100 {
           right->setTarget(dist);
 
           while (!left->isFinishedMove() && !right->isFinishedMove()) {
-            left->moveDistanceMillis(dist);
-            right->moveDistanceMillis(dist);
+            left->moveDistanceMillis(dist, 0.5);
+            right->moveDistanceMillis(dist, 0.5);
           }
+
+          left->setSpeed(0);
+          right->setSpeed(0);
         }
 
     private:

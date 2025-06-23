@@ -18,11 +18,11 @@ int curTime = 0;
 #define SCREEN_ADDRESS 0x3C // I2C adress
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-#define KP1 3
-#define KI1 0.2
+#define KP1 1.5
+#define KI1 1.2
 #define KD1 0
-#define KP2 3
-#define KI2 0.2
+#define KP2 1.5
+#define KI2 1.2
 #define KD2 0
 mtrn3100::PIDController left_controller(KP1, KI1, KD1);
 mtrn3100::PIDController right_controller(KP2, KI2, KD2);
@@ -42,8 +42,10 @@ mtrn3100::Encoder left_encoder(MOT1ENCA, MOT1ENCB, 0);
 mtrn3100::Encoder right_encoder(MOT2ENCA, MOT2ENCB, 1);
 
 // Initialise each wheel
-mtrn3100::Wheel left_wheel(&left_controller, &left_motor, &left_encoder);
-mtrn3100::Wheel right_wheel(&right_controller, &right_motor, &right_encoder);
+#define RIGHT_COEF 0.91
+#define LEFT_COEF 0.95
+mtrn3100::Wheel left_wheel(&left_controller, &left_motor, &left_encoder, LEFT_COEF);
+mtrn3100::Wheel right_wheel(&right_controller, &right_motor, &right_encoder, RIGHT_COEF);
 
 mtrn3100::Chassis chassis(&left_wheel, &right_wheel);
 
@@ -83,7 +85,7 @@ void setup() {
 }
 
 void loop() {
-  chassis.moveForwardDistance(200);
+  chassis.moveForwardDistance(220);
 
   while (true) {}
 }

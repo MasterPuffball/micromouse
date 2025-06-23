@@ -10,22 +10,25 @@
 namespace mtrn3100 {
   class Wheel {
     public:
-        Wheel(mtrn3100::PIDController* controller, mtrn3100::Motor* motor, mtrn3100::Encoder* encoder) :  controller(controller), motor(motor), encoder(encoder) {
+        Wheel(mtrn3100::PIDController* controller, mtrn3100::Motor* motor, mtrn3100::Encoder* encoder, float coef) :  controller(controller), motor(motor), encoder(encoder), gearbox_coef(coef) {
         }
 
         void setTarget(int16_t dist) {
           controller->zeroAndSetTarget(getDistanceMoved(), dist);
         }
 
-        void moveDistanceMillis(int16_t dist) {
+        void moveDistanceMillis(int16_t dist, float speed) {
           if (!isFinishedMove()) {
             float pos = getDistanceMoved();
             float intendedSignal = controller->compute(pos);
-            Serial.println(String("Intended: ") + intendedSignal);
+            Serial.println(String("Intended: ") + min(intendedSignal,255)* gearbox_coef);
             Serial.println(String("Pos: ") + controller->getError());
 
-            motor->setSpeed(intendedSignal);
-            if (controller->getError() < tolerance) {
+            float motorSignal = min(intendedSignal,100)* gearbox_coef * speed;
+
+            motor->setSpeed(motorSignal);
+
+            if (abs(controller->getError()) <= tolerance) {
               countWithinTolerance++;
             }
             else {
@@ -37,13 +40,18 @@ namespace mtrn3100 {
         bool isFinishedMove() {
           if (countWithinTolerance >= acceptableCounts) {
             countWithinTolerance = 0;
+            motor->setSpeed(0);
             return true;
           }
           return false;
         }
 
         float getDistanceMoved() {
-          return (distanceMoved  = (encoder->getRotationDegrees()/360) * wheel_diam);
+          return (distanceMoved  = encoder->getRotation() * wheel_radius);
+        }
+
+        void setSpeed(float speed) {
+          motor->setSpeed(speed);
         }
 
     private:
@@ -51,9 +59,11 @@ namespace mtrn3100 {
         const mtrn3100::Motor* motor;
         const mtrn3100::Encoder* encoder;
         float distanceMoved = 0;
-        const float wheel_diam = 32; //In millis
+        const float wheel_radius = 16; //In millis
+        float gearbox_coef;
         const int acceptableCounts = 200;
-        const float tolerance = 0.01;
+        const float tolerance = 1;
+        const float minSignal = 5;
         int countWithinTolerance = 0;
         bool hasStartedMove = false;
   };

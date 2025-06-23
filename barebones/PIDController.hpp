@@ -16,7 +16,12 @@ public:
 
         error = setpoint - (input - zero_ref);
 
-        integral += error*dt;
+        if (error < 0) {
+          integral += max(error, -30)*dt;
+        }
+        else {
+          integral += min(error, 30)*dt;
+        }
         derivative = (error - prev_error) / dt;
         output = kp * error + ki * integral + kd * derivative;
 
