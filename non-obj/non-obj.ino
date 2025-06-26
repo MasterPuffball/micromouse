@@ -7,8 +7,11 @@
 #include "Motor.hpp"
 #include "PIDController.hpp"
 #include "Wheel.hpp"
+#include "IMU.hpp"
+
 
 bool screen_initialised = true;
+bool imu_initialised = true;
 int curTime = 0;
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
@@ -46,6 +49,9 @@ mtrn3100::Encoder right_encoder(MOT2ENCA, MOT2ENCB, 1);
 mtrn3100::Wheel left_wheel(&left_controller, &left_motor, &left_encoder, LEFT_COEF);
 mtrn3100::Wheel right_wheel(&right_controller, &right_motor, &right_encoder, RIGHT_COEF);
 
+// Initialise the IMU
+mtrn3100::IMU imu(Wire);
+
 void initScreen() {
   if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
     Serial.println(F("SSD1306 allocation failed"));
@@ -54,6 +60,19 @@ void initScreen() {
 
   // Clear the buffer
   display.clearDisplay();
+}
+
+void initWheels() {
+  left_motor.flip();
+  // right_motor.flip();
+  // left_encoder.flip();
+  right_encoder.flip();
+}
+
+void initIMU() {
+  if(!imu.begin()) {
+    imu_initialised = false;
+  }
 }
 
 void drawString(String string) {
@@ -65,13 +84,6 @@ void drawString(String string) {
   display.println(string);
 
   display.display();
-}
-
-void initWheels() {
-  left_motor.flip();
-  // right_motor.flip();
-  // left_encoder.flip();
-  right_encoder.flip();
 }
 
 void moveDistanceMillis(mtrn3100::Wheel wheel, int16_t dist, float speed) {
@@ -104,14 +116,18 @@ void moveForwardDistance(uint16_t dist) {
 
 void setup() {
   Serial.begin(9600);
+  Wire.begin();
   delay(1000);
   initScreen();
   initWheels();
+  initIMU();
+  delay(500);
 }
 
 void loop() {
-  moveForwardDistance(220);
+  // moveForwardDistance(220);
+  imu.printCurrentData();
 
-  while (true) {}
+  delay(100);
 }
 
