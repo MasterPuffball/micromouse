@@ -7,7 +7,6 @@
 #include "Motor.hpp"
 #include "PIDController.hpp"
 #include "Wheel.hpp"
-#include "Chassis.hpp"
 
 bool screen_initialised = true;
 int curTime = 0;
@@ -42,12 +41,10 @@ mtrn3100::Encoder left_encoder(MOT1ENCA, MOT1ENCB, 0);
 mtrn3100::Encoder right_encoder(MOT2ENCA, MOT2ENCB, 1);
 
 // Initialise each wheel
-#define RIGHT_COEF 0.87
+#define RIGHT_COEF 0.91
 #define LEFT_COEF 0.95
 mtrn3100::Wheel left_wheel(&left_controller, &left_motor, &left_encoder, LEFT_COEF);
 mtrn3100::Wheel right_wheel(&right_controller, &right_motor, &right_encoder, RIGHT_COEF);
-
-mtrn3100::Chassis chassis(&left_wheel, &right_wheel);
 
 void initScreen() {
   if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
@@ -77,6 +74,34 @@ void initWheels() {
   right_encoder.flip();
 }
 
+void moveDistanceMillis(mtrn3100::Wheel wheel, int16_t dist, float speed) {
+  if (!wheel.isFinishedMove()) {
+    float pos = wheel.getDistanceMoved();
+    float intendedSignal = wheel.compute(pos);
+    float motorSignal = wheel.getMotorSignal(intendedSignal, speed);
+
+    Serial.println(String("Intended: ") + intendedSignal);
+    Serial.println(String("Actual: ") + motorSignal);
+    Serial.println(String("Pos: ") + wheel.getError());
+
+    wheel.setSpeed(motorSignal);
+    wheel.updateTolerance();
+  }
+}
+
+void moveForwardDistance(uint16_t dist) {
+  left_wheel.setTarget(dist);
+  right_wheel.setTarget(dist);
+
+  while (!left_wheel.isFinishedMove() && !right_wheel.isFinishedMove()) {
+    moveDistanceMillis(left_wheel, dist, 0.5);
+    moveDistanceMillis(right_wheel, dist, 0.5);
+  }
+
+  left_wheel.setSpeed(0);
+  right_wheel.setSpeed(0);
+}
+
 void setup() {
   Serial.begin(9600);
   delay(1000);
@@ -85,7 +110,7 @@ void setup() {
 }
 
 void loop() {
-  chassis.moveForwardDistance(245);
+  moveForwardDistance(220);
 
   while (true) {}
 }
