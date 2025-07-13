@@ -119,6 +119,7 @@ def solve_maze_from_image(image_path, start=(0, 0), goal=(9, 9), start_dir='E'):
     plt.xticks(range(GRID_SIZE))
     plt.yticks(range(GRID_SIZE))
     plt.savefig("debug_grid_fresh.png")
-    plt.close()
+    plt.close()  
+    #tt
 
     return commands
