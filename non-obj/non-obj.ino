@@ -7,19 +7,25 @@
 #include "Motor.hpp"
 #include "PIDController.hpp"
 #include "Wheel.hpp"
+<<<<<<< Updated upstream
 #include "IMU.hpp"
 
+=======
+#include "Lidar.hpp"
+>>>>>>> Stashed changes
 
 bool screen_initialised = true;
 bool imu_initialised = true;
 int curTime = 0;
 
+// Display
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 #define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
 #define SCREEN_ADDRESS 0x3C // I2C adress
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
+// Controllers
 #define KP1 1.5
 #define KI1 1.2
 #define KD1 0
@@ -29,6 +35,7 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 mtrn3100::PIDController left_controller(KP1, KI1, KD1);
 mtrn3100::PIDController right_controller(KP2, KI2, KD2);
 
+// Motors
 #define MOT2PWM 9
 #define MOT2DIR 10
 #define MOT1PWM 11
@@ -36,6 +43,7 @@ mtrn3100::PIDController right_controller(KP2, KI2, KD2);
 mtrn3100::Motor left_motor(MOT1PWM, MOT1DIR);
 mtrn3100::Motor right_motor(MOT2PWM, MOT2DIR);
 
+// Encoders
 #define MOT1ENCA 2 // PIN 2 is an interupt
 #define MOT2ENCA 3
 #define MOT1ENCB 7 // PIN 7 is an interupt
@@ -120,6 +128,7 @@ void setup() {
   delay(1000);
   initScreen();
   initWheels();
+<<<<<<< Updated upstream
   initIMU();
   delay(500);
 }
@@ -129,5 +138,15 @@ void loop() {
   imu.printCurrentData();
 
   delay(100);
+=======
+  lidarSetup();
+}
+
+void loop() {
+  moveForwardDistance(220);
+  // getLeftDist();
+  // getFrontDist();
+  // getRightDist();
+>>>>>>> Stashed changes
 }
 
