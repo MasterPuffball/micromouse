@@ -7,16 +7,10 @@
 #include "Motor.hpp"
 #include "PIDController.hpp"
 #include "Wheel.hpp"
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
+
 #include "IMU.hpp"
 
-=======
 #include "Lidar.hpp"
->>>>>>> Stashed changes
-=======
-#include "Lidar.hpp"
->>>>>>> Stashed changes
 
 bool screen_initialised = true;
 bool imu_initialised = true;
@@ -132,10 +126,9 @@ void setup() {
   delay(1000);
   initScreen();
   initWheels();
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
   initIMU();
   delay(500);
+  lidarSetup();
 }
 
 void loop() {
@@ -143,20 +136,9 @@ void loop() {
   imu.printCurrentData();
 
   delay(100);
-=======
-=======
->>>>>>> Stashed changes
-  lidarSetup();
-}
-
-void loop() {
   moveForwardDistance(220);
   // getLeftDist();
   // getFrontDist();
   // getRightDist();
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
 }
 
