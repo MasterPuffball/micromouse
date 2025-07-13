@@ -8,8 +8,12 @@
 #include "PIDController.hpp"
 #include "Wheel.hpp"
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 #include "IMU.hpp"
 
+=======
+#include "Lidar.hpp"
+>>>>>>> Stashed changes
 =======
 #include "Lidar.hpp"
 >>>>>>> Stashed changes
@@ -129,6 +133,7 @@ void setup() {
   initScreen();
   initWheels();
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
   initIMU();
   delay(500);
 }
@@ -139,6 +144,8 @@ void loop() {
 
   delay(100);
 =======
+=======
+>>>>>>> Stashed changes
   lidarSetup();
 }
 
@@ -147,6 +154,9 @@ void loop() {
   // getLeftDist();
   // getFrontDist();
   // getRightDist();
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 }
 
