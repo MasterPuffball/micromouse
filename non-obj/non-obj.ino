@@ -63,7 +63,6 @@ void initScreen() {
     Serial.println(F("SSD1306 allocation failed"));
     screen_initialised = false;
   }
-
   // Clear the buffer
   display.clearDisplay();
 }
@@ -133,12 +132,80 @@ void setup() {
 
 void loop() {
   // moveForwardDistance(220);
-  imu.printCurrentData();
+  //imu.printCurrentData();
 
-  delay(100);
-  moveForwardDistance(220);
+  //delay(100);
+  //moveForwardDistance(220);
   // getLeftDist();
   // getFrontDist();
   // getRightDist();
+
+  //turnLeft90();
+  //turnRight90();
+  //executeMovementString("lfrfflfr");
+  //delay(1000);
 }
 
+void moveForwardOneCell() {
+  float distance = 180.0;
+
+  float leftStart = left_wheel.getDistanceMoved();
+  float rightStart = right_wheel.getDistanceMoved();
+
+  left_wheel.setTarget(leftStart + distance);
+  right_wheel.setTarget(rightStart + distance);
+
+  while (!left_wheel.isFinishedMove() || !right_wheel.isFinishedMove()) {
+    moveDistanceMillis(left_wheel, distance, 0.5);
+    moveDistanceMillis(right_wheel, distance, 0.5);
+    delay(5);
+  }
+
+  left_wheel.setSpeed(0);
+  right_wheel.setSpeed(0);
+}
+
+void turnLeft90() {
+  float turnDist = 70.0;
+  float l0 = left_wheel.getDistanceMoved();
+  float r0 = right_wheel.getDistanceMoved();
+
+  left_wheel.setTarget(l0 - turnDist);
+  right_wheel.setTarget(r0 + turnDist);
+
+  while (!left_wheel.isFinishedMove() || !right_wheel.isFinishedMove()) {
+    moveDistanceMillis(left_wheel, turnDist, 0.5);
+    moveDistanceMillis(right_wheel, turnDist, 0.5);
+  }
+
+  left_wheel.setSpeed(0);
+  right_wheel.setSpeed(0);
+}
+
+void turnRight90() {
+  float turnDist = 70.0;
+  float l0 = left_wheel.getDistanceMoved();
+  float r0 = right_wheel.getDistanceMoved();
+
+  left_wheel.setTarget(l0 + turnDist);
+  right_wheel.setTarget(r0 - turnDist);
+
+  while (!left_wheel.isFinishedMove() || !right_wheel.isFinishedMove()) {
+    moveDistanceMillis(left_wheel, turnDist, 0.5);
+    moveDistanceMillis(right_wheel, turnDist, 0.5);
+  }
+
+  left_wheel.setSpeed(0);
+  right_wheel.setSpeed(0);
+}
+
+void executeMovementString(const char* cmdString) {
+  for (int i = 0; cmdString[i] != '\0'; ++i) {
+    switch (cmdString[i]) {
+      case 'f': moveForwardOneCell(); break;
+      case 'l': turnLeft90(); break;
+      case 'r': turnRight90(); break;
+    }
+    delay(100);
+  }
+}
