@@ -123,7 +123,7 @@ void moveForwardDistance(uint16_t dist) {
 }
 
 void computeTurnDistTo(float angle) {
-  float normalized = fmod(angle - imu.read().z, 360.0f);
+  float normalized = fmod(angle - imu.getDirection(), 360.0f);
 
   if (normalized > 180) {
     normalized -= 360.0;
@@ -177,7 +177,7 @@ void loop() {
 }
 
 bool withinAngleTolerance(float target) {
-  float angle = imu.updateRead().z;
+  float angle = imu.getDirection();
   return (angle <= target + ANGLE_TOLERANCE) && (angle >= target - ANGLE_TOLERANCE);
 }
 
@@ -192,11 +192,11 @@ void moveForwardOneCell() {
 }
 
 void turnLeft90() {
-  turnToAngle(imu.read().z - 90, 0.5);
+  turnToAngle(imu.getDirection() - 90, 0.5);
 }
 
 void turnRight90() {
-  turnToAngle(imu.read().z + 90, 0.5);
+  turnToAngle(imu.getDirection() + 90, 0.5);
 }
 
 void executeMovementString(char* cmdString) {

@@ -47,6 +47,11 @@ public:
       return read();
     }
 
+    float getDirection() {
+      update();
+      return z;
+    }
+
     float normalizeAngle(float angle) {
       float normalized = fmod(angle, 360.0f);
 
