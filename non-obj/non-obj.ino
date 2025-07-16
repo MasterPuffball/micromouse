@@ -27,11 +27,15 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #define KP1 1.5
 #define KI1 1.2
 #define KD1 0
+mtrn3100::PIDController left_controller(KP1, KI1, KD1);
 #define KP2 1.5
 #define KI2 1.2
 #define KD2 0
-mtrn3100::PIDController left_controller(KP1, KI1, KD1);
 mtrn3100::PIDController right_controller(KP2, KI2, KD2);
+#define KP3 1.5
+#define KI3 1.2
+#define KD3 0
+mtrn3100::PIDController IMU_controller(KP3, KI3, KD3)
 
 // Motors
 #define MOT2PWM 9
@@ -57,6 +61,9 @@ mtrn3100::Wheel right_wheel(&right_controller, &right_motor, &right_encoder, RIG
 
 // Initialise the IMU
 mtrn3100::IMU imu(Wire);
+
+#define AXLE_LENGTH 40.0; //in Millis
+#define ANGLE_TOLERANCE 1;
 
 void initScreen() {
   if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
@@ -91,7 +98,7 @@ void drawString(String string) {
   display.display();
 }
 
-void moveDistanceMillis(mtrn3100::Wheel wheel, int16_t dist, float speed) {
+void moveWheelToTarget(mtrn3100::Wheel wheel, float speed) {
   if (!wheel.isFinishedMove()) {
     float pos = wheel.getDistanceMoved();
     float intendedSignal = wheel.compute(pos);
@@ -111,8 +118,34 @@ void moveForwardDistance(uint16_t dist) {
   right_wheel.setTarget(dist);
 
   while (!left_wheel.isFinishedMove() && !right_wheel.isFinishedMove()) {
-    moveDistanceMillis(left_wheel, dist, 0.5);
-    moveDistanceMillis(right_wheel, dist, 0.5);
+    moveWheelToTarget(left_wheel, 0.5);
+    moveWheelToTarget(right_wheel, 0.5);
+  }
+
+  left_wheel.setSpeed(0);
+  right_wheel.setSpeed(0);
+}
+
+void computeTurnDistTo(float angle) {
+  float normalized = fmod(angle - imu.read().z, 360.0f);
+
+  if (normalized > 180) {
+    normalized -= 360.0;
+  }
+
+  return AXLE_LENGTH * normalized * (PI/180);
+}
+
+void turnToAngle(float angle, float speed) {
+  float dir = imu.normalizeAngle(angle);
+  float dist = computeTurnDistTo(dir);
+
+  left_wheel.setTarget(dist);
+  right_wheel.setTarget(-dist);
+
+  while (!left_wheel.isFinishedMove() && !right_wheel.isFinishedMove()) {
+    moveWheelToTarget(left_wheel, speed);
+    moveWheelToTarget(right_wheel, speed);
   }
 
   left_wheel.setSpeed(0);
@@ -131,6 +164,7 @@ void setup() {
 }
 
 void loop() {
+  snapToAngle(90, 0.5);
   // moveForwardDistance(220);
   //imu.printCurrentData();
 
@@ -146,60 +180,30 @@ void loop() {
   //delay(1000);
 }
 
-void moveForwardOneCell() {
-  float distance = 180.0;
+bool withinAngleTolerance(float target) {
+  float angle = imu.updateRead().z;
+  return (angle <= target + ANGLE_TOLERANCE) && (angle >= target - ANGLE_TOLERANCE);
+}
 
-  float leftStart = left_wheel.getDistanceMoved();
-  float rightStart = right_wheel.getDistanceMoved();
-
-  left_wheel.setTarget(leftStart + distance);
-  right_wheel.setTarget(rightStart + distance);
-
-  while (!left_wheel.isFinishedMove() || !right_wheel.isFinishedMove()) {
-    moveDistanceMillis(left_wheel, distance, 0.5);
-    moveDistanceMillis(right_wheel, distance, 0.5);
-    delay(5);
+void snapToAngle(float angle, float speed) {
+  if (!withinAngleTolerance(angle)) {
+    turnToAngle(angle, speed);
   }
+}
 
-  left_wheel.setSpeed(0);
-  right_wheel.setSpeed(0);
+void moveForwardOneCell() {
+  moveForwardDistance(180.0);
 }
 
 void turnLeft90() {
-  float turnDist = 70.0;
-  float l0 = left_wheel.getDistanceMoved();
-  float r0 = right_wheel.getDistanceMoved();
-
-  left_wheel.setTarget(l0 - turnDist);
-  right_wheel.setTarget(r0 + turnDist);
-
-  while (!left_wheel.isFinishedMove() || !right_wheel.isFinishedMove()) {
-    moveDistanceMillis(left_wheel, turnDist, 0.5);
-    moveDistanceMillis(right_wheel, turnDist, 0.5);
-  }
-
-  left_wheel.setSpeed(0);
-  right_wheel.setSpeed(0);
+  turnToAngle(imu.read().z - 90, 0.5);
 }
 
 void turnRight90() {
-  float turnDist = 70.0;
-  float l0 = left_wheel.getDistanceMoved();
-  float r0 = right_wheel.getDistanceMoved();
-
-  left_wheel.setTarget(l0 + turnDist);
-  right_wheel.setTarget(r0 - turnDist);
-
-  while (!left_wheel.isFinishedMove() || !right_wheel.isFinishedMove()) {
-    moveDistanceMillis(left_wheel, turnDist, 0.5);
-    moveDistanceMillis(right_wheel, turnDist, 0.5);
-  }
-
-  left_wheel.setSpeed(0);
-  right_wheel.setSpeed(0);
+  turnToAngle(imu.read().z + 90, 0.5);
 }
 
-void executeMovementString(const char* cmdString) {
+void executeMovementString(char* cmdString) {
   for (int i = 0; cmdString[i] != '\0'; ++i) {
     switch (cmdString[i]) {
       case 'f': moveForwardOneCell(); break;
