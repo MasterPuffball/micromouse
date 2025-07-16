@@ -32,10 +32,6 @@ mtrn3100::PIDController left_controller(KP1, KI1, KD1);
 #define KI2 1.2
 #define KD2 0
 mtrn3100::PIDController right_controller(KP2, KI2, KD2);
-#define KP3 1.5
-#define KI3 1.2
-#define KD3 0
-mtrn3100::PIDController IMU_controller(KP3, KI3, KD3)
 
 // Motors
 #define MOT2PWM 9
