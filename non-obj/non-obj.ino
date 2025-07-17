@@ -61,6 +61,9 @@ mtrn3100::IMU imu(Wire);
 #define AXLE_LENGTH 40.0 //in Millis
 #define ANGLE_TOLERANCE 1
 
+// Wall following constants
+#define WALL_DIST 100
+
 void initScreen() {
   if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
     Serial.println(F("SSD1306 allocation failed"));
@@ -145,6 +148,35 @@ void turnToAngle(float angle, float speed) {
 
   left_wheel.setSpeed(0);
   right_wheel.setSpeed(0);
+}
+
+void followWallLoop() {
+  while (true) {
+    // Check the distance to the wall
+    int distance = getFrontDist();
+    int changeInDist = distance - WALL_DIST;
+    left_wheel.setTarget(changeInDist);
+    right_wheel.setTarget(changeInDist);
+
+    if (left_wheel.isFinishedMove() && right_wheel.isFinishedMove()) {
+      // finished checking, we might wanna make it an always loop?
+      left_wheel.setSpeed(0);
+      right_wheel.setSpeed(0);
+
+      continue;
+    }
+
+    // based off distance move forwards or backwards
+    if (changeInDist > 0) {
+      // Too far, needs to move forwards
+      moveDistanceMillis(left_wheel, changeInDist, 0.5);
+      moveDistanceMillis(right_wheel, changeInDist, 0.5);
+    } else if (changeInDist < 0) {
+      // Too close, needs to move backwards
+      moveDistanceMillis(left_wheel, -changeInDist, 0.5);
+      moveDistanceMillis(right_wheel, -changeInDist, 0.5);
+    }
+  }
 }
 
 void setup() {
