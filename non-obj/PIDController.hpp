@@ -16,16 +16,15 @@ public:
 
         error = setpoint - (input - zero_ref);
 
-        if (error < 0) {
-          integral += max(error, -30)*dt;
-        }
-        else {
-          integral += min(error, 30)*dt;
-        }
+        integral += min(error,30)*dt;
         derivative = (error - prev_error) / dt;
         output = kp * error + ki * integral + kd * derivative;
 
         prev_error = error;
+
+        Serial.println(String("Current error: ") + kp*error);
+        Serial.println(String("Current integral: ") + ki*integral);
+        Serial.println(String("Current differential: ") + kd*derivative);
 
         return output;
     }
@@ -46,9 +45,13 @@ public:
     // The first argument becomes the new zero reference point.
     // Target is the setpoint value.
     void zeroAndSetTarget(float zero, float target) {
-        prev_time = micros();
-        zero_ref = zero;
-        setpoint = target;
+      prev_time = micros();
+      zero_ref = zero;
+      setpoint = target;
+
+      error = target-zero; 
+      integral = 0;
+      derivative = 0;
     }
 
 public:

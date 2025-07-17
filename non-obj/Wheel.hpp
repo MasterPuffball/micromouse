@@ -15,6 +15,8 @@ namespace mtrn3100 {
 
         void setTarget(int16_t dist) {
           controller->zeroAndSetTarget(getDistanceMoved(), dist);
+          isFinished = false;
+          countWithinTolerance = 0;
         }
 
         float compute(float pos) {
@@ -22,29 +24,27 @@ namespace mtrn3100 {
         }
 
         float getMotorSignal(float signal, float speed) {
-          return min(signal,100) * gearbox_coef * speed;
+          return constrain(signal, -100, 100) * gearbox_coef * speed;
         }
 
         float getError() {
           return controller->getError();
         }
 
-        void updateTolerance() {
-          if (abs(controller->getError()) <= tolerance) {
+        bool isFinishedMove() {
+          if (abs(getError()) <= tolerance) {
             countWithinTolerance++;
           }
           else {
             countWithinTolerance = 0;
           }
-        }
 
-        bool isFinishedMove() {
-          if (countWithinTolerance >= acceptableCounts) {
-            countWithinTolerance = 0;
+          if (countWithinTolerance >= acceptableCounts || isFinished) {
             motor->setSpeed(0);
-            return true;
+            isFinished = true;
           }
-          return false;
+
+          return isFinished;
         }
 
         float getDistanceMoved() {
@@ -62,10 +62,10 @@ namespace mtrn3100 {
         float distanceMoved = 0;
         const float wheel_radius = 16; //In millis
         float gearbox_coef;
-        const int acceptableCounts = 200;
-        const float tolerance = 1;
-        const float minSignal = 5;
+        const int acceptableCounts = 1;
+        const float tolerance = 5;
+        bool isFinished = false;
+        const float minSignal = 5.06;
         int countWithinTolerance = 0;
-        bool hasStartedMove = false;
   };
 }

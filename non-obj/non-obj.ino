@@ -26,11 +26,11 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 // Controllers
 #define KP1 1.1
 #define KI1 0.3
-#define KD1 0.1
+#define KD1 0.05
 mtrn3100::PIDController left_controller(KP1, KI1, KD1);
 #define KP2 1.1
 #define KI2 0.3
-#define KD2 0.1
+#define KD2 0.05
 mtrn3100::PIDController right_controller(KP2, KI2, KD2);
 
 // Motors
@@ -103,9 +103,9 @@ void moveWheelToTarget(mtrn3100::Wheel wheel, float speed) {
     Serial.println(String("Intended: ") + intendedSignal);
     Serial.println(String("Actual: ") + motorSignal);
     Serial.println(String("Pos: ") + wheel.getError());
+    Serial.println();
 
     wheel.setSpeed(motorSignal);
-    wheel.updateTolerance();
   }
 }
 
@@ -113,13 +113,16 @@ void moveForwardDistance(uint16_t dist) {
   left_wheel.setTarget(dist);
   right_wheel.setTarget(dist);
 
-  while (!left_wheel.isFinishedMove() && !right_wheel.isFinishedMove()) {
+  while (!left_wheel.isFinishedMove() || !right_wheel.isFinishedMove()) {
     moveWheelToTarget(left_wheel, 0.5);
     moveWheelToTarget(right_wheel, 0.5);
   }
 
   left_wheel.setSpeed(0);
   right_wheel.setSpeed(0);
+
+  // Serial.println("Done movement left" + left_wheel.isFinishedMove());
+  // Serial.println("Done movement right" + right_wheel.isFinishedMove());
 }
 
 float computeTurnDistTo(float angle) {
@@ -160,7 +163,8 @@ void setup() {
 
 void loop() {
   // snapToAngle(90, 0.5);
-  moveForwardDistance(220);
+  // moveForwardDistance(220);
+
   //imu.printCurrentData();
 
   //delay(100);
@@ -169,7 +173,8 @@ void loop() {
   // getFrontDist();
   // getRightDist();
 
-  //turnLeft90();
+  turnLeft90();
+  delay(10000);
   //turnRight90();
   //executeMovementString("lfrfflfr");
   //delay(1000);
