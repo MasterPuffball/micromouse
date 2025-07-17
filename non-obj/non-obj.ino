@@ -61,6 +61,7 @@ mtrn3100::IMU imu(Wire);
 #define AXLE_LENGTH 40.0; //in Millis
 #define ANGLE_TOLERANCE 1;
 
+// Wall following constants
 #define WALL_DIST 100
 
 void initScreen() {
