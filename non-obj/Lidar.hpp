@@ -51,36 +51,22 @@ void lidarSetup() {
 }
 
 int getLeftDist() {
-  Serial.print("Left: ");
-  Serial.print(leftSensor.readRangeSingleMillimeters());
-  Serial.print(" | ");
+  // Serial.print("Left: ");
+  // Serial.print(leftSensor.readRangeSingleMillimeters());
+  // Serial.print(" | ");
   return leftSensor.readRangeSingleMillimeters();
 }
 
 int getFrontDist() {
-  Serial.print("Front: ");
-  Serial.print(frontSensor.readRangeSingleMillimeters());
-  Serial.print(" | ");
+  // Serial.print("Front: ");
+  // Serial.print(frontSensor.readRangeSingleMillimeters());
+  // Serial.print(" | ");
   return frontSensor.readRangeSingleMillimeters();
 }
 
 int getRightDist() {
-  Serial.print("Right: ");
-  Serial.print(rightSensor.readRangeSingleMillimeters());
-  Serial.println();
+  // Serial.print("Right: ");
+  // Serial.print(rightSensor.readRangeSingleMillimeters());
+  // Serial.println();
   return rightSensor.readRangeSingleMillimeters();
 }
-
-// void lidarLoop() {
-//   Serial.print(leftSensor.readRangeSingleMillimeters());
-//   Serial.print(" | ");
-//   Serial.print(frontSensor.readRangeSingleMillimeters());
-//   Serial.print(" | ");
-//   Serial.print(rightSensor.readRangeSingleMillimeters());
-//   Serial.println();
-  
-//   if (leftSensor.timeoutOccurred()) { Serial.print("Left Sensor TIMEOUT"); }
-//   if (frontSensor.timeoutOccurred()) { Serial.print("Front Sensor TIMEOUT"); }
-//   if (rightSensor.timeoutOccurred()) { Serial.print("Right Sensor TIMEOUT"); }
-//   delay(100);
-// }
