@@ -24,13 +24,13 @@ int curTime = 0;
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 // Controllers
-#define KP1 1.5
-#define KI1 1.2
-#define KD1 0
+#define KP1 1.1
+#define KI1 0.3
+#define KD1 0.1
 mtrn3100::PIDController left_controller(KP1, KI1, KD1);
-#define KP2 1.5
-#define KI2 1.2
-#define KD2 0
+#define KP2 1.1
+#define KI2 0.3
+#define KD2 0.1
 mtrn3100::PIDController right_controller(KP2, KI2, KD2);
 
 // Motors
@@ -58,8 +58,8 @@ mtrn3100::Wheel right_wheel(&right_controller, &right_motor, &right_encoder, RIG
 // Initialise the IMU
 mtrn3100::IMU imu(Wire);
 
-#define AXLE_LENGTH 40.0; //in Millis
-#define ANGLE_TOLERANCE 1;
+#define AXLE_LENGTH 40.0 //in Millis
+#define ANGLE_TOLERANCE 1
 
 // Wall following constants
 #define WALL_DIST 100
@@ -125,7 +125,7 @@ void moveForwardDistance(uint16_t dist) {
   right_wheel.setSpeed(0);
 }
 
-void computeTurnDistTo(float angle) {
+float computeTurnDistTo(float angle) {
   float normalized = fmod(angle - imu.getDirection(), 360.0f);
 
   if (normalized > 180) {
@@ -136,8 +136,7 @@ void computeTurnDistTo(float angle) {
 }
 
 void turnToAngle(float angle, float speed) {
-  float dir = imu.normalizeAngle(angle);
-  float dist = computeTurnDistTo(dir);
+  float dist = computeTurnDistTo(imu.normalizeAngle(angle));
 
   left_wheel.setTarget(dist);
   right_wheel.setTarget(-dist);
@@ -193,7 +192,19 @@ void setup() {
 
 void loop() {
   // snapToAngle(90, 0.5);
-  followWallLoop();
+  moveForwardDistance(220);
+  //imu.printCurrentData();
+
+  //delay(100);
+  //moveForwardDistance(220);
+  // getLeftDist();
+  // getFrontDist();
+  // getRightDist();
+
+  //turnLeft90();
+  //turnRight90();
+  //executeMovementString("lfrfflfr");
+  //delay(1000);
 }
 
 bool withinAngleTolerance(float target) {
