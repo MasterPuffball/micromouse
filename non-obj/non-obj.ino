@@ -28,6 +28,7 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #define KI1 0
 #define KD1 0.1
 mtrn3100::PIDController left_controller(KP1, KI1, KD1);
+
 #define KP2 1.1
 #define KI2 0
 #define KD2 0.1
@@ -44,6 +45,12 @@ mtrn3100::PIDController diff_controller(KP3, KI3, KD3);
 #define KI4 0.3
 #define KD4 0.1
 mtrn3100::PIDController direction_controller(KP4, KI4, KD4);
+
+// Distance Controller
+#define KP5 1.5
+#define KI5 0.3
+#define KD5 0.1
+mtrn3100::PIDController distance_controller(KP5, KI5, KD5);
 
 // Motors
 #define MOT2PWM 9
@@ -107,8 +114,8 @@ void setup() {
   initScreen();
   initWheels();
   initIMU();
+  initLidar();
   delay(500);
-  lidarSetup();
 }
 
 void drawString(String string) {
@@ -132,7 +139,6 @@ void moveForwardDistance(uint16_t dist, float speed) {
   right_controller.zeroAndSetTarget(right_wheel.getDistanceMoved(), dist);
 
   while (!abs(left_controller.getError()) < DIST_TOLERANCE || !abs(right_controller.getError()) < DIST_TOLERANCE || !abs(direction_controller.getError()) < ANGLE_TOLERANCE) {
-    
     float directionalAdjustment = direction_controller.computeDir(imu.getDirection());
     float leftSignal = left_controller.compute(left_wheel.getDistanceMoved());
     float rightSignal = right_controller.compute(right_wheel.getDistanceMoved());
@@ -170,16 +176,36 @@ void turnToAngle(float angle, float speed) {
 
     left_wheel.setSpeed(leftMotorSignal);
     right_wheel.setSpeed(rightMotorSignal);
-    delay(100);
   }
 
   left_wheel.setSpeed(0);
   right_wheel.setSpeed(0);
 }
 
+void maintainDistance(float distance, float speed) {
+  // Set to stay in the current direction
+  float startDirection = imu.getDirection();
+  direction_controller.zeroAndSetTarget(startDirection, startDirection);
+
+  // Set the wheels to go forward dist
+  distance_controller.zeroAndSetTarget(0, distance);
+
+  while (true) {
+    float directionalAdjustment = direction_controller.computeDir(imu.getDirection());
+    float distanceAdjustment = distance_controller.compute(getFrontDist());
+
+    float leftMotorSignal = (constrain(-distanceAdjustment, -100, 100) + (directionalAdjustment * DIRECTION_BIAS_STRENGTH)) * speed;
+    float rightMotorSignal = (constrain(-distanceAdjustment, -100, 100) - (directionalAdjustment * DIRECTION_BIAS_STRENGTH)) * speed;
+
+    left_wheel.setSpeed(leftMotorSignal);
+    right_wheel.setSpeed(rightMotorSignal);
+  }
+}
+
 void loop() {
   
-  turnToAngle(0,0.5);
+  // turnToAngle(0,0.5);
+  maintainDistance(100, 0.5);
 
   //delay(100);
   // getLeftDist();

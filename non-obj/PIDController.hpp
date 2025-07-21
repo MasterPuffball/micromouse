@@ -22,10 +22,10 @@ public:
         output = kp * error + ki * integral + kd * derivative;
 
         prev_error = error;
-
-        // Serial.println(String("Current error: ") + kp*error);
-        // Serial.println(String("Current integral: ") + ki*integral);
-        // Serial.println(String("Current differential: ") + kd*derivative);
+        Serial.println(String("Input is: ") + input);
+        Serial.println(String("Current error: ") + kp*error);
+        Serial.println(String("Current integral: ") + ki*integral);
+        Serial.println(String("Current differential: ") + kd*derivative);
 
         return output;
     }
@@ -44,10 +44,10 @@ public:
         output = kp * error + ki * integral + kd * derivative;
 
         prev_error = error;
-        Serial.println(String("Input is: ") + input);
-        Serial.println(String("Current Dir error: ") + kp*error);
-        Serial.println(String("Current Dir integral: ") + ki*integral);
-        Serial.println(String("Current Dir differential: ") + kd*derivative);
+        // Serial.println(String("Input is: ") + input);
+        // Serial.println(String("Current Dir error: ") + kp*error);
+        // Serial.println(String("Current Dir integral: ") + ki*integral);
+        // Serial.println(String("Current Dir differential: ") + kd*derivative);
 
         return output;
     }
