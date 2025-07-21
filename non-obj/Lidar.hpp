@@ -51,6 +51,7 @@ void initLidar() {
 }
 
 int getLeftDist() {
+
   int reading = leftSensor.readRangeSingleMillimeters();
   Serial.println(String("Left: ") + reading);
   return reading;
@@ -67,17 +68,3 @@ int getRightDist() {
   Serial.println(String("right: ") + reading);
   return reading;
 }
-
-// void lidarLoop() {
-//   Serial.print(leftSensor.readRangeSingleMillimeters());
-//   Serial.print(" | ");
-//   Serial.print(frontSensor.readRangeSingleMillimeters());
-//   Serial.print(" | ");
-//   Serial.print(rightSensor.readRangeSingleMillimeters());
-//   Serial.println();
-  
-//   if (leftSensor.timeoutOccurred()) { Serial.print("Left Sensor TIMEOUT"); }
-//   if (frontSensor.timeoutOccurred()) { Serial.print("Front Sensor TIMEOUT"); }
-//   if (rightSensor.timeoutOccurred()) { Serial.print("Right Sensor TIMEOUT"); }
-//   delay(100);
-// }

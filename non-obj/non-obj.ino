@@ -86,6 +86,9 @@ mtrn3100::IMU imu(Wire);
 #define DIFF_BIAS_STRENGTH 0
 #define MAX_DURATION 10000 // in millis
 
+// Wall following constants
+#define WALL_DIST 100
+
 void initScreen() {
   if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
     Serial.println(F("SSD1306 allocation failed"));
@@ -219,6 +222,7 @@ void turnToAngle(float angle, float speed) {
   right_wheel.setSpeed(0);
 }
 
+
 void maintainDistance(float distance, float speed) {
   // Set to stay in the current direction
   float startDirection = imu.getDirection();
@@ -243,6 +247,8 @@ void loop() {
 //   moveForwardOneCell();
 //   turnToAngle(0,0.5);
   // maintainDistance(100, 0.5);
+  // turnToAngle(0,0.5);
+  maintainDistance(100, 0.5);
 
   //delay(100);
   // getLeftDist();
