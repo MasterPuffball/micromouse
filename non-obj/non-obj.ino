@@ -25,18 +25,18 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 // Controllers
 #define KP1 1.1
-#define KI1 0
+#define KI1 0.1
 #define KD1 0.1
 mtrn3100::PIDController left_controller(KP1, KI1, KD1);
 
 #define KP2 1.1
-#define KI2 0
+#define KI2 0.1
 #define KD2 0.1
 mtrn3100::PIDController right_controller(KP2, KI2, KD2);
 
 // Encoder direction controller
 #define KP3 1.5
-#define KI3 0
+#define KI3 0.1
 #define KD3 0.1
 mtrn3100::PIDController diff_controller(KP3, KI3, KD3);
 
@@ -81,9 +81,10 @@ mtrn3100::IMU imu(Wire);
 #define ANGLE_TOLERANCE 5
 #define DIST_TOLERANCE 5
 #define DIFF_TOLERANCE 3
+#define SLOPE_TOLERANCE 0.02
 #define DIRECTION_BIAS_STRENGTH 0.75
 #define DIFF_BIAS_STRENGTH 0
-
+#define MAX_DURATION 10000 // in millis
 
 void initScreen() {
   if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
@@ -129,6 +130,30 @@ void drawString(String string) {
   display.display();
 }
 
+bool directionSteady() {
+  if (abs(direction_controller.getError()) < ANGLE_TOLERANCE && abs(direction_controller.getDerivative() < SLOPE_TOLERANCE)) {
+    return true;
+  }
+  Serial.println("DIRECTION NOT STEADY");
+  return false;
+}
+
+bool leftPosSteady() {
+  if (abs(left_controller.getError()) < DIST_TOLERANCE && abs(left_controller.getDerivative() < SLOPE_TOLERANCE)) {
+    return true;
+  }
+  Serial.println("LEFT NOT STEADY");
+  return false;
+}
+
+bool rightPosSteady() {
+  if (abs(right_controller.getError()) < DIST_TOLERANCE && abs(right_controller.getDerivative() < SLOPE_TOLERANCE)) {
+    return true;
+  }
+  Serial.println("RIGHT NOT STEADY");
+  return false;
+}
+
 void moveForwardDistance(uint16_t dist, float speed) {
   // Set to stay in the current direction
   float startDirection = imu.getDirection();
@@ -138,7 +163,9 @@ void moveForwardDistance(uint16_t dist, float speed) {
   left_controller.zeroAndSetTarget(left_wheel.getDistanceMoved(), dist);
   right_controller.zeroAndSetTarget(right_wheel.getDistanceMoved(), dist);
 
-  while (!abs(left_controller.getError()) < DIST_TOLERANCE || !abs(right_controller.getError()) < DIST_TOLERANCE || !abs(direction_controller.getError()) < ANGLE_TOLERANCE) {
+  long startTime = millis();
+
+  while (true) {
     float directionalAdjustment = direction_controller.computeDir(imu.getDirection());
     float leftSignal = left_controller.compute(left_wheel.getDistanceMoved());
     float rightSignal = right_controller.compute(right_wheel.getDistanceMoved());
@@ -148,6 +175,10 @@ void moveForwardDistance(uint16_t dist, float speed) {
 
     left_wheel.setSpeed(leftMotorSignal);
     right_wheel.setSpeed(rightMotorSignal);
+
+    if ((directionSteady() && leftPosSteady() && rightPosSteady()) || millis() - startTime > MAX_DURATION) {
+      break;
+    }
   }
 
   left_wheel.setSpeed(0);
@@ -163,7 +194,9 @@ void turnToAngle(float angle, float speed) {
   float rightZero = right_wheel.getDistanceMoved(); 
   diff_controller.zeroAndSetTarget(0, 0);
 
-  while (!abs(diff_controller.getError()) < DIFF_TOLERANCE || !abs(direction_controller.getError()) < ANGLE_TOLERANCE) {
+  long startTime = millis();
+
+  while (true) {
     float directionalAdjustment = direction_controller.computeDir(imu.getDirection());
 
     float leftDiff = left_wheel.getDistanceMoved() - leftZero;
@@ -176,6 +209,10 @@ void turnToAngle(float angle, float speed) {
 
     left_wheel.setSpeed(leftMotorSignal);
     right_wheel.setSpeed(rightMotorSignal);
+
+    if (directionSteady() || millis() - startTime > MAX_DURATION) {
+        break;
+    }
   }
 
   left_wheel.setSpeed(0);
@@ -203,9 +240,9 @@ void maintainDistance(float distance, float speed) {
 }
 
 void loop() {
-  
-  // turnToAngle(0,0.5);
-  maintainDistance(100, 0.5);
+//   moveForwardOneCell();
+//   turnToAngle(0,0.5);
+  // maintainDistance(100, 0.5);
 
   //delay(100);
   // getLeftDist();
@@ -213,9 +250,11 @@ void loop() {
   // getRightDist();
   // turnRight90();
   // turnLeft90();
+
+  
  
-  //executeMovementString("lfrfflfr");
-  //delay(1000);
+  executeMovementString("lfrfflfr");
+  delay(1000);
 }
 
 void moveForwardOneCell() {
@@ -223,11 +262,11 @@ void moveForwardOneCell() {
 }
 
 void turnLeft90() {
-  turnToAngle(imu.getDirection() - 90, 0.5);
+  turnToAngle(imu.normalizeAngle(imu.getDirection() + 90), 0.5);
 }
 
 void turnRight90() {
-  turnToAngle(imu.getDirection() + 90, 0.5);
+  turnToAngle(imu.normalizeAngle(imu.getDirection() - 90), 0.5);
 }
 
 void executeMovementString(char* cmdString) {
@@ -237,6 +276,6 @@ void executeMovementString(char* cmdString) {
       case 'l': turnLeft90(); break;
       case 'r': turnRight90(); break;
     }
-    delay(100);
+    delay(500);
   }
 }
