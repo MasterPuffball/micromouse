@@ -26,7 +26,7 @@ public:
 
     // Takes a percentage speed
     void setSpeed(int16_t speed) {
-      setPWM(map(min(100, max(-100,speed)), -100, 100, -255, 255));
+      setPWM(map(constrain(speed, -100, 100), -100, 100, -255, 255));
     }
 
     // Flips the direction of the motor (based on mounting), returns whether it is or isnt flipped (for debugging)

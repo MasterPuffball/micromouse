@@ -33,6 +33,18 @@ mtrn3100::PIDController left_controller(KP1, KI1, KD1);
 #define KD2 0.05
 mtrn3100::PIDController right_controller(KP2, KI2, KD2);
 
+// Encoder direction controller
+#define KP3 1.1
+#define KI3 0.3
+#define KD3 0.05
+mtrn3100::PIDController diff_controller(KP3, KI3, KD3);
+
+// True direction controller
+#define KP4 1.1
+#define KI4 0.3
+#define KD4 0.05
+mtrn3100::PIDController direction_controller(KP4, KI4, KD4);
+
 // Motors
 #define MOT2PWM 9
 #define MOT2DIR 10
@@ -52,14 +64,19 @@ mtrn3100::Encoder right_encoder(MOT2ENCA, MOT2ENCB, 1);
 // Initialise each wheel
 #define RIGHT_COEF 0.91
 #define LEFT_COEF 0.95
-mtrn3100::Wheel left_wheel(&left_controller, &left_motor, &left_encoder, LEFT_COEF);
-mtrn3100::Wheel right_wheel(&right_controller, &right_motor, &right_encoder, RIGHT_COEF);
+mtrn3100::Wheel left_wheel(&left_motor, &left_encoder);
+mtrn3100::Wheel right_wheel(&right_motor, &right_encoder);
 
 // Initialise the IMU
 mtrn3100::IMU imu(Wire);
 
-#define AXLE_LENGTH 40.0 //in Millis
+// Tuning Prams
 #define ANGLE_TOLERANCE 1
+#define DIST_TOLERANCE 5
+#define DIFF_TOLERANCE 3
+#define DIRECTION_BIAS_STRENGTH 0.3
+#define DIFF_BIAS_STRENGTH 0.3
+
 
 void initScreen() {
   if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
@@ -83,73 +100,6 @@ void initIMU() {
   }
 }
 
-void drawString(String string) {
-  display.clearDisplay();
-
-  display.setTextSize(1);             // Normal 1:1 pixel scale
-  display.setTextColor(SSD1306_WHITE);        // Draw white text
-  display.setCursor(0,0);             // Start at top-left corner
-  display.println(string);
-
-  display.display();
-}
-
-void moveWheelToTarget(mtrn3100::Wheel wheel, float speed) {
-  if (!wheel.isFinishedMove()) {
-    float pos = wheel.getDistanceMoved();
-    float intendedSignal = wheel.compute(pos);
-    float motorSignal = wheel.getMotorSignal(intendedSignal, speed);
-
-    Serial.println(String("Intended: ") + intendedSignal);
-    Serial.println(String("Actual: ") + motorSignal);
-    Serial.println(String("Pos: ") + wheel.getError());
-    Serial.println();
-
-    wheel.setSpeed(motorSignal);
-  }
-}
-
-void moveForwardDistance(uint16_t dist) {
-  left_wheel.setTarget(dist);
-  right_wheel.setTarget(dist);
-
-  while (!left_wheel.isFinishedMove() || !right_wheel.isFinishedMove()) {
-    moveWheelToTarget(left_wheel, 0.5);
-    moveWheelToTarget(right_wheel, 0.5);
-  }
-
-  left_wheel.setSpeed(0);
-  right_wheel.setSpeed(0);
-
-  // Serial.println("Done movement left" + left_wheel.isFinishedMove());
-  // Serial.println("Done movement right" + right_wheel.isFinishedMove());
-}
-
-float computeTurnDistTo(float angle) {
-  float normalized = fmod(angle - imu.getDirection(), 360.0f);
-
-  if (normalized > 180) {
-    normalized -= 360.0;
-  }
-
-  return AXLE_LENGTH * normalized * (PI/180);
-}
-
-void turnToAngle(float angle, float speed) {
-  float dist = computeTurnDistTo(imu.normalizeAngle(angle));
-
-  left_wheel.setTarget(dist);
-  right_wheel.setTarget(-dist);
-
-  while (!left_wheel.isFinishedMove() && !right_wheel.isFinishedMove()) {
-    moveWheelToTarget(left_wheel, speed);
-    moveWheelToTarget(right_wheel, speed);
-  }
-
-  left_wheel.setSpeed(0);
-  right_wheel.setSpeed(0);
-}
-
 void setup() {
   Serial.begin(9600);
   Wire.begin();
@@ -161,9 +111,72 @@ void setup() {
   lidarSetup();
 }
 
+void drawString(String string) {
+  display.clearDisplay();
+
+  display.setTextSize(1);             // Normal 1:1 pixel scale
+  display.setTextColor(SSD1306_WHITE);        // Draw white text
+  display.setCursor(0,0);             // Start at top-left corner
+  display.println(string);
+
+  display.display();
+}
+
+void moveForwardDistance(uint16_t dist, float speed) {
+  // Set to stay in the current direction
+  float startDirection = imu.getDirection();
+  direction_controller.zeroAndSetTarget(startDirection, startDirection);
+
+  // Set the wheels to go forward dist
+  left_controller.zeroAndSetTarget(left_wheel.getDistanceMoved(), dist);
+  right_controller.zeroAndSetTarget(right_wheel.getDistanceMoved(), dist);
+
+  while (!abs(left_controller.getError()) < DIST_TOLERANCE || !abs(right_controller.getError()) < DIST_TOLERANCE || !abs(direction_controller.getError()) < ANGLE_TOLERANCE) {
+    float directionalAdjustment = direction_controller.computeDir(imu.getDirection());
+    float leftSignal = left_controller.compute(left_wheel.getDistanceMoved());
+    float rightSignal = right_controller.compute(right_wheel.getDistanceMoved());
+
+    float leftMotorSignal = (constrain(leftSignal, -100, 100) - (directionalAdjustment * DIRECTION_BIAS_STRENGTH)) * speed;
+    float rightMotorSignal = (constrain(rightSignal, -100, 100) + (directionalAdjustment * DIRECTION_BIAS_STRENGTH)) * speed;
+
+    left_wheel.setSpeed(leftMotorSignal);
+    right_wheel.setSpeed(rightMotorSignal);
+  }
+
+  left_wheel.setSpeed(0);
+  right_wheel.setSpeed(0);
+}
+
+void turnToAngle(float angle, float speed) {
+  // Set to move to the target angle
+  float startDirection = imu.getDirection();
+  direction_controller.zeroAndSetTarget(startDirection, angle);
+
+  float leftZero = left_wheel.getDistanceMoved();
+  float rightZero = right_wheel.getDistanceMoved(); 
+  diff_controller.zeroAndSetTarget(0, 0);
+
+  while (!abs(diff_controller.getError()) < DIFF_TOLERANCE || !abs(direction_controller.getError()) < ANGLE_TOLERANCE) {
+    float directionalAdjustment = direction_controller.computeDir(imu.getDirection());
+
+    float leftDiff = left_wheel.getDistanceMoved() - leftZero;
+    float rightDiff = -(right_wheel.getDistanceMoved() - rightZero);
+    // +ve = left forward /-ve means send left wheel back
+    float diffAdjustment = diff_controller.compute(leftDiff - rightDiff);
+
+    float leftMotorSignal = (-constrain(directionalAdjustment, -100, 100) + (diffAdjustment * DIFF_BIAS_STRENGTH)) * speed;
+    float rightMotorSignal = (constrain(directionalAdjustment, -100, 100) - (diffAdjustment * DIFF_BIAS_STRENGTH)) * speed;
+
+    left_wheel.setSpeed(leftMotorSignal);
+    right_wheel.setSpeed(rightMotorSignal);
+  }
+
+  left_wheel.setSpeed(0);
+  right_wheel.setSpeed(0);
+}
+
 void loop() {
-  // snapToAngle(90, 0.5);
-  // moveForwardDistance(220);
+  moveForwardDistance(220, 0.5);
 
   //imu.printCurrentData();
 
@@ -180,19 +193,8 @@ void loop() {
   //delay(1000);
 }
 
-bool withinAngleTolerance(float target) {
-  float angle = imu.getDirection();
-  return (angle <= target + ANGLE_TOLERANCE) && (angle >= target - ANGLE_TOLERANCE);
-}
-
-void snapToAngle(float angle, float speed) {
-  if (!withinAngleTolerance(angle)) {
-    turnToAngle(angle, speed);
-  }
-}
-
 void moveForwardOneCell() {
-  moveForwardDistance(180.0);
+  moveForwardDistance(180.0, 0.5);
 }
 
 void turnLeft90() {

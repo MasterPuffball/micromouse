@@ -36,19 +36,15 @@ public:
 
     IMUData read() {
       IMUData data;
+      imu.update();
       data.x = normalizeAngle(imu.getAngleX());
       data.y = normalizeAngle(imu.getAngleY());
       data.z = normalizeAngle(imu.getAngleZ());
       return data;
     }
 
-    IMUData updateRead() {
-      update();
-      return read();
-    }
-
     float getDirection() {
-      update();
+      read();
       return z;
     }
 
@@ -59,7 +55,7 @@ public:
     }
 
     void printCurrentData() {
-      IMUData data = updateRead();
+      IMUData data = read();
       
       Serial.print("X : ");
       Serial.print(data.x);
