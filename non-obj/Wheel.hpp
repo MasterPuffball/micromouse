@@ -63,7 +63,7 @@ namespace mtrn3100 {
         const float wheel_radius = 16; //In millis
         float gearbox_coef;
         const int acceptableCounts = 200;
-        const float tolerance = 1;
+        const float tolerance = 5;
         const float minSignal = 5;
         int countWithinTolerance = 0;
         bool hasStartedMove = false;

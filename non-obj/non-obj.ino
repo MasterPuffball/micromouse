@@ -24,13 +24,13 @@ int curTime = 0;
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 // Controllers
-#define KP1 1.1
-#define KI1 0.3
-#define KD1 0.1
+#define KP1 1.5
+#define KI1 1.2
+#define KD1 0.0
 mtrn3100::PIDController left_controller(KP1, KI1, KD1);
-#define KP2 1.1
-#define KI2 0.3
-#define KD2 0.1
+#define KP2 1.5
+#define KI2 1.2
+#define KD2 0.0
 mtrn3100::PIDController right_controller(KP2, KI2, KD2);
 
 // Motors
@@ -50,7 +50,7 @@ mtrn3100::Encoder left_encoder(MOT1ENCA, MOT1ENCB, 0);
 mtrn3100::Encoder right_encoder(MOT2ENCA, MOT2ENCB, 1);
 
 // Initialise each wheel
-#define RIGHT_COEF 0.91
+#define RIGHT_COEF 0.87
 #define LEFT_COEF 0.95
 mtrn3100::Wheel left_wheel(&left_controller, &left_motor, &left_encoder, LEFT_COEF);
 mtrn3100::Wheel right_wheel(&right_controller, &right_motor, &right_encoder, RIGHT_COEF);
@@ -162,6 +162,7 @@ void followWallLoop() {
       // finished checking, we might wanna make it an always loop?
       left_wheel.setSpeed(0);
       right_wheel.setSpeed(0);
+      delay(500);
 
       continue;
     }
@@ -169,12 +170,12 @@ void followWallLoop() {
     // based off distance move forwards or backwards
     if (changeInDist > 0) {
       // Too far, needs to move forwards
-      moveDistanceMillis(left_wheel, changeInDist, 0.5);
-      moveDistanceMillis(right_wheel, changeInDist, 0.5);
+      moveWheelToTarget(left_wheel, 0.25);
+      moveWheelToTarget(right_wheel, 0.25);
     } else if (changeInDist < 0) {
       // Too close, needs to move backwards
-      moveDistanceMillis(left_wheel, -changeInDist, 0.5);
-      moveDistanceMillis(right_wheel, -changeInDist, 0.5);
+      moveWheelToTarget(left_wheel, 0.25);
+      moveWheelToTarget(right_wheel, 0.25);
     }
   }
 }
@@ -194,6 +195,7 @@ void loop() {
   // snapToAngle(90, 0.5);
   moveForwardDistance(220);
   //imu.printCurrentData();
+  // followWallLoop();
 
   //delay(100);
   //moveForwardDistance(220);
