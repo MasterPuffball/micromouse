@@ -25,24 +25,24 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 // Controllers
 #define KP1 1.1
-#define KI1 0.3
-#define KD1 0.05
+#define KI1 0
+#define KD1 0.1
 mtrn3100::PIDController left_controller(KP1, KI1, KD1);
 #define KP2 1.1
-#define KI2 0.3
-#define KD2 0.05
+#define KI2 0
+#define KD2 0.1
 mtrn3100::PIDController right_controller(KP2, KI2, KD2);
 
 // Encoder direction controller
-#define KP3 1.1
-#define KI3 0.3
-#define KD3 0.05
+#define KP3 1.5
+#define KI3 0
+#define KD3 0.1
 mtrn3100::PIDController diff_controller(KP3, KI3, KD3);
 
 // True direction controller
-#define KP4 1.1
+#define KP4 1.5
 #define KI4 0.3
-#define KD4 0.05
+#define KD4 0.1
 mtrn3100::PIDController direction_controller(KP4, KI4, KD4);
 
 // Motors
@@ -71,11 +71,11 @@ mtrn3100::Wheel right_wheel(&right_motor, &right_encoder);
 mtrn3100::IMU imu(Wire);
 
 // Tuning Prams
-#define ANGLE_TOLERANCE 1
+#define ANGLE_TOLERANCE 5
 #define DIST_TOLERANCE 5
 #define DIFF_TOLERANCE 3
-#define DIRECTION_BIAS_STRENGTH 0.3
-#define DIFF_BIAS_STRENGTH 0.3
+#define DIRECTION_BIAS_STRENGTH 0.75
+#define DIFF_BIAS_STRENGTH 0
 
 
 void initScreen() {
@@ -132,12 +132,13 @@ void moveForwardDistance(uint16_t dist, float speed) {
   right_controller.zeroAndSetTarget(right_wheel.getDistanceMoved(), dist);
 
   while (!abs(left_controller.getError()) < DIST_TOLERANCE || !abs(right_controller.getError()) < DIST_TOLERANCE || !abs(direction_controller.getError()) < ANGLE_TOLERANCE) {
+    
     float directionalAdjustment = direction_controller.computeDir(imu.getDirection());
     float leftSignal = left_controller.compute(left_wheel.getDistanceMoved());
     float rightSignal = right_controller.compute(right_wheel.getDistanceMoved());
 
-    float leftMotorSignal = (constrain(leftSignal, -100, 100) - (directionalAdjustment * DIRECTION_BIAS_STRENGTH)) * speed;
-    float rightMotorSignal = (constrain(rightSignal, -100, 100) + (directionalAdjustment * DIRECTION_BIAS_STRENGTH)) * speed;
+    float leftMotorSignal = (constrain(leftSignal, -100, 100) + (directionalAdjustment * DIRECTION_BIAS_STRENGTH)) * speed;
+    float rightMotorSignal = (constrain(rightSignal, -100, 100) - (directionalAdjustment * DIRECTION_BIAS_STRENGTH)) * speed;
 
     left_wheel.setSpeed(leftMotorSignal);
     right_wheel.setSpeed(rightMotorSignal);
@@ -164,11 +165,12 @@ void turnToAngle(float angle, float speed) {
     // +ve = left forward /-ve means send left wheel back
     float diffAdjustment = diff_controller.compute(leftDiff - rightDiff);
 
-    float leftMotorSignal = (-constrain(directionalAdjustment, -100, 100) + (diffAdjustment * DIFF_BIAS_STRENGTH)) * speed;
-    float rightMotorSignal = (constrain(directionalAdjustment, -100, 100) - (diffAdjustment * DIFF_BIAS_STRENGTH)) * speed;
+    float leftMotorSignal = (constrain(directionalAdjustment, -100, 100) + (diffAdjustment * DIFF_BIAS_STRENGTH)) * speed;
+    float rightMotorSignal = (constrain(-directionalAdjustment, -100, 100) - (diffAdjustment * DIFF_BIAS_STRENGTH)) * speed;
 
     left_wheel.setSpeed(leftMotorSignal);
     right_wheel.setSpeed(rightMotorSignal);
+    delay(100);
   }
 
   left_wheel.setSpeed(0);
@@ -176,19 +178,16 @@ void turnToAngle(float angle, float speed) {
 }
 
 void loop() {
-  moveForwardDistance(220, 0.5);
-
-  //imu.printCurrentData();
+  
+  turnToAngle(0,0.5);
 
   //delay(100);
-  //moveForwardDistance(220);
   // getLeftDist();
   // getFrontDist();
   // getRightDist();
-
-  turnLeft90();
-  delay(10000);
-  //turnRight90();
+  // turnRight90();
+  // turnLeft90();
+ 
   //executeMovementString("lfrfflfr");
   //delay(1000);
 }
