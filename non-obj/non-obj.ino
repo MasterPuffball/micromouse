@@ -25,13 +25,32 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 // Controllers
 #define KP1 1.1
-#define KI1 0.3
+#define KI1 0
 #define KD1 0.1
 mtrn3100::PIDController left_controller(KP1, KI1, KD1);
+
 #define KP2 1.1
-#define KI2 0.3
+#define KI2 0
 #define KD2 0.1
 mtrn3100::PIDController right_controller(KP2, KI2, KD2);
+
+// Encoder direction controller
+#define KP3 1.5
+#define KI3 0
+#define KD3 0.1
+mtrn3100::PIDController diff_controller(KP3, KI3, KD3);
+
+// True direction controller
+#define KP4 1.5
+#define KI4 0.3
+#define KD4 0.1
+mtrn3100::PIDController direction_controller(KP4, KI4, KD4);
+
+// Distance Controller
+#define KP5 1.5
+#define KI5 0.3
+#define KD5 0.1
+mtrn3100::PIDController distance_controller(KP5, KI5, KD5);
 
 // Motors
 #define MOT2PWM 9
@@ -52,14 +71,19 @@ mtrn3100::Encoder right_encoder(MOT2ENCA, MOT2ENCB, 1);
 // Initialise each wheel
 #define RIGHT_COEF 0.91
 #define LEFT_COEF 0.95
-mtrn3100::Wheel left_wheel(&left_controller, &left_motor, &left_encoder, LEFT_COEF);
-mtrn3100::Wheel right_wheel(&right_controller, &right_motor, &right_encoder, RIGHT_COEF);
+mtrn3100::Wheel left_wheel(&left_motor, &left_encoder);
+mtrn3100::Wheel right_wheel(&right_motor, &right_encoder);
 
 // Initialise the IMU
 mtrn3100::IMU imu(Wire);
 
-#define AXLE_LENGTH 40.0 //in Millis
-#define ANGLE_TOLERANCE 1
+// Tuning Prams
+#define ANGLE_TOLERANCE 5
+#define DIST_TOLERANCE 5
+#define DIFF_TOLERANCE 3
+#define DIRECTION_BIAS_STRENGTH 0.75
+#define DIFF_BIAS_STRENGTH 0
+
 
 // Wall following constants
 #define WALL_DIST 100
@@ -86,6 +110,17 @@ void initIMU() {
   }
 }
 
+void setup() {
+  Serial.begin(9600);
+  Wire.begin();
+  delay(1000);
+  initScreen();
+  initWheels();
+  initIMU();
+  initLidar();
+  delay(500);
+}
+
 void drawString(String string) {
   display.clearDisplay();
 
@@ -97,129 +132,97 @@ void drawString(String string) {
   display.display();
 }
 
-void moveWheelToTarget(mtrn3100::Wheel wheel, float speed) {
-  if (!wheel.isFinishedMove()) {
-    float pos = wheel.getDistanceMoved();
-    float intendedSignal = wheel.compute(pos);
-    float motorSignal = wheel.getMotorSignal(intendedSignal, speed);
+void moveForwardDistance(uint16_t dist, float speed) {
+  // Set to stay in the current direction
+  float startDirection = imu.getDirection();
+  direction_controller.zeroAndSetTarget(startDirection, startDirection);
 
-    Serial.println(String("Intended: ") + intendedSignal);
-    Serial.println(String("Actual: ") + motorSignal);
-    Serial.println(String("Pos: ") + wheel.getError());
+  // Set the wheels to go forward dist
+  left_controller.zeroAndSetTarget(left_wheel.getDistanceMoved(), dist);
+  right_controller.zeroAndSetTarget(right_wheel.getDistanceMoved(), dist);
 
-    wheel.setSpeed(motorSignal);
-    wheel.updateTolerance();
-  }
-}
+  while (!abs(left_controller.getError()) < DIST_TOLERANCE || !abs(right_controller.getError()) < DIST_TOLERANCE || !abs(direction_controller.getError()) < ANGLE_TOLERANCE) {
+    float directionalAdjustment = direction_controller.computeDir(imu.getDirection());
+    float leftSignal = left_controller.compute(left_wheel.getDistanceMoved());
+    float rightSignal = right_controller.compute(right_wheel.getDistanceMoved());
 
-void moveForwardDistance(uint16_t dist) {
-  left_wheel.setTarget(dist);
-  right_wheel.setTarget(dist);
+    float leftMotorSignal = (constrain(leftSignal, -100, 100) + (directionalAdjustment * DIRECTION_BIAS_STRENGTH)) * speed;
+    float rightMotorSignal = (constrain(rightSignal, -100, 100) - (directionalAdjustment * DIRECTION_BIAS_STRENGTH)) * speed;
 
-  while (!left_wheel.isFinishedMove() && !right_wheel.isFinishedMove()) {
-    moveWheelToTarget(left_wheel, 0.5);
-    moveWheelToTarget(right_wheel, 0.5);
+    left_wheel.setSpeed(leftMotorSignal);
+    right_wheel.setSpeed(rightMotorSignal);
   }
 
   left_wheel.setSpeed(0);
   right_wheel.setSpeed(0);
-}
-
-float computeTurnDistTo(float angle) {
-  float normalized = fmod(angle - imu.getDirection(), 360.0f);
-
-  if (normalized > 180) {
-    normalized -= 360.0;
-  }
-
-  return AXLE_LENGTH * normalized * (PI/180);
 }
 
 void turnToAngle(float angle, float speed) {
-  float dist = computeTurnDistTo(imu.normalizeAngle(angle));
+  // Set to move to the target angle
+  float startDirection = imu.getDirection();
+  direction_controller.zeroAndSetTarget(startDirection, angle);
 
-  left_wheel.setTarget(dist);
-  right_wheel.setTarget(-dist);
+  float leftZero = left_wheel.getDistanceMoved();
+  float rightZero = right_wheel.getDistanceMoved(); 
+  diff_controller.zeroAndSetTarget(0, 0);
 
-  while (!left_wheel.isFinishedMove() && !right_wheel.isFinishedMove()) {
-    moveWheelToTarget(left_wheel, speed);
-    moveWheelToTarget(right_wheel, speed);
+  while (!abs(diff_controller.getError()) < DIFF_TOLERANCE || !abs(direction_controller.getError()) < ANGLE_TOLERANCE) {
+    float directionalAdjustment = direction_controller.computeDir(imu.getDirection());
+
+    float leftDiff = left_wheel.getDistanceMoved() - leftZero;
+    float rightDiff = -(right_wheel.getDistanceMoved() - rightZero);
+    // +ve = left forward /-ve means send left wheel back
+    float diffAdjustment = diff_controller.compute(leftDiff - rightDiff);
+
+    float leftMotorSignal = (constrain(directionalAdjustment, -100, 100) + (diffAdjustment * DIFF_BIAS_STRENGTH)) * speed;
+    float rightMotorSignal = (constrain(-directionalAdjustment, -100, 100) - (diffAdjustment * DIFF_BIAS_STRENGTH)) * speed;
+
+    left_wheel.setSpeed(leftMotorSignal);
+    right_wheel.setSpeed(rightMotorSignal);
   }
 
   left_wheel.setSpeed(0);
   right_wheel.setSpeed(0);
 }
 
-void followWallLoop() {
+
+void maintainDistance(float distance, float speed) {
+  // Set to stay in the current direction
+  float startDirection = imu.getDirection();
+  direction_controller.zeroAndSetTarget(startDirection, startDirection);
+
+  // Set the wheels to go forward dist
+  distance_controller.zeroAndSetTarget(0, distance);
+
   while (true) {
-    // Check the distance to the wall
-    int distance = getFrontDist();
-    int changeInDist = distance - WALL_DIST;
-    left_wheel.setTarget(changeInDist);
-    right_wheel.setTarget(changeInDist);
+    float directionalAdjustment = direction_controller.computeDir(imu.getDirection());
+    float distanceAdjustment = distance_controller.compute(getFrontDist());
 
-    if (left_wheel.isFinishedMove() && right_wheel.isFinishedMove()) {
-      // finished checking, we might wanna make it an always loop?
-      left_wheel.setSpeed(0);
-      right_wheel.setSpeed(0);
+    float leftMotorSignal = (constrain(-distanceAdjustment, -100, 100) + (directionalAdjustment * DIRECTION_BIAS_STRENGTH)) * speed;
+    float rightMotorSignal = (constrain(-distanceAdjustment, -100, 100) - (directionalAdjustment * DIRECTION_BIAS_STRENGTH)) * speed;
 
-      continue;
-    }
-
-    // based off distance move forwards or backwards
-    if (changeInDist > 0) {
-      // Too far, needs to move forwards
-      moveDistanceMillis(left_wheel, changeInDist, 0.5);
-      moveDistanceMillis(right_wheel, changeInDist, 0.5);
-    } else if (changeInDist < 0) {
-      // Too close, needs to move backwards
-      moveDistanceMillis(left_wheel, -changeInDist, 0.5);
-      moveDistanceMillis(right_wheel, -changeInDist, 0.5);
-    }
+    left_wheel.setSpeed(leftMotorSignal);
+    right_wheel.setSpeed(rightMotorSignal);
   }
 }
 
-void setup() {
-  Serial.begin(9600);
-  Wire.begin();
-  delay(1000);
-  initScreen();
-  initWheels();
-  initIMU();
-  delay(500);
-  lidarSetup();
-}
-
 void loop() {
-  // snapToAngle(90, 0.5);
-  moveForwardDistance(220);
-  //imu.printCurrentData();
+  // turnToAngle(0,0.5);
+  maintainDistance(100, 0.5);
 
   //delay(100);
-  //moveForwardDistance(220);
   // getLeftDist();
   // getFrontDist();
   // getRightDist();
-
-  //turnLeft90();
-  //turnRight90();
+  // turnRight90();
+  // turnLeft90();
+ 
   //executeMovementString("lfrfflfr");
   //delay(1000);
 }
 
-bool withinAngleTolerance(float target) {
-  float angle = imu.getDirection();
-  return (angle <= target + ANGLE_TOLERANCE) && (angle >= target - ANGLE_TOLERANCE);
-}
-
-void snapToAngle(float angle, float speed) {
-  if (!withinAngleTolerance(angle)) {
-    turnToAngle(angle, speed);
-  }
-}
-
 void moveForwardOneCell() {
-  moveForwardDistance(180.0);
+  moveForwardDistance(180.0, 0.5);
 }
 
 void turnLeft90() {

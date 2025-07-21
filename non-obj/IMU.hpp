@@ -14,41 +14,37 @@ struct IMUData {
 
 class IMU {
 public:
-    IMU(TwoWire& wire = Wire) : imu(wire) {}
+    IMU(TwoWire& wire = Wire) : mpu(wire) {}
 
     bool begin() {
-      if (!imu.begin()) {
+      if (mpu.begin() != 0) {
         Serial.println(F("IMU init failed"));
         return false;
       }
-
-      imu.calcOffsets();
+    
+      Serial.println(F("Calculating offsets, do not move MPU6050"));
+      mpu.calcOffsets(); // gyro and accelero
+      Serial.println("Done!\n");
 
       return true;
     }
 
-    void update() {
-      imu.update();
-      x = imu.getAngleX();
-      y = imu.getAngleY();
-      z = imu.getAngleZ();
-    }
-
     IMUData read() {
       IMUData data;
-      data.x = normalizeAngle(imu.getAngleX());
-      data.y = normalizeAngle(imu.getAngleY());
-      data.z = normalizeAngle(imu.getAngleZ());
+      mpu.update();
+      
+      data.x = normalizeAngle(mpu.getAngleX());
+      data.y = normalizeAngle(mpu.getAngleY());
+      data.z = normalizeAngle(mpu.getAngleZ());
+      x = data.x;
+      y = data.y;
+      z = data.z;
+
       return data;
     }
 
-    IMUData updateRead() {
-      update();
-      return read();
-    }
-
     float getDirection() {
-      update();
+      read();
       return z;
     }
 
@@ -59,18 +55,18 @@ public:
     }
 
     void printCurrentData() {
-      IMUData data = updateRead();
+      read();
       
       Serial.print("X : ");
-      Serial.print(data.x);
+      Serial.print(x);
       Serial.print("\tY : ");
-      Serial.print(data.y);
+      Serial.print(y);
       Serial.print("\tZ : ");
-      Serial.println(data.z);
+      Serial.println(z);
     }
 
   private:
-    MPU6050 imu;
+    MPU6050 mpu;
     bool initialized = true;
     float x;
     float y;

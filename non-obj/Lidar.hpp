@@ -12,7 +12,7 @@ VL6180X frontSensor;
 VL6180X rightSensor;
 
 
-void lidarSetup() {
+void initLidar() {
     Wire.begin();
     Serial.begin(9600);
 
@@ -51,22 +51,20 @@ void lidarSetup() {
 }
 
 int getLeftDist() {
-  // Serial.print("Left: ");
-  // Serial.print(leftSensor.readRangeSingleMillimeters());
-  // Serial.print(" | ");
-  return leftSensor.readRangeSingleMillimeters();
+
+  int reading = leftSensor.readRangeSingleMillimeters();
+  Serial.println(String("Left: ") + reading);
+  return reading;
 }
 
 int getFrontDist() {
-  // Serial.print("Front: ");
-  // Serial.print(frontSensor.readRangeSingleMillimeters());
-  // Serial.print(" | ");
-  return frontSensor.readRangeSingleMillimeters();
+  int reading = frontSensor.readRangeSingleMillimeters();
+  Serial.println(String("Front: ") + reading);
+  return reading;
 }
 
 int getRightDist() {
-  // Serial.print("Right: ");
-  // Serial.print(rightSensor.readRangeSingleMillimeters());
-  // Serial.println();
-  return rightSensor.readRangeSingleMillimeters();
+  int reading = rightSensor.readRangeSingleMillimeters();
+  Serial.println(String("right: ") + reading);
+  return reading;
 }
