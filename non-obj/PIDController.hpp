@@ -22,10 +22,10 @@ public:
         output = kp * error + ki * integral + kd * derivative;
 
         prev_error = error;
-        Serial.println(String("Input is: ") + input);
-        Serial.println(String("Current error: ") + kp*error);
-        Serial.println(String("Current integral: ") + ki*integral);
-        Serial.println(String("Current differential: ") + kd*derivative);
+        // Serial.println(String("Input is: ") + input);
+        // Serial.println(String("Current error: ") + kp*error);
+        // Serial.println(String("Current integral: ") + ki*integral);
+        // Serial.println(String("Current differential: ") + kd*derivative);
 
         return output;
     }
@@ -72,6 +72,10 @@ public:
     // The error is the difference between the desired position and current position. 
     float getError() {
       return error;
+    }
+
+    float getDerivative() {
+        return derivative;
     }
 
     // This must be called before trying to achieve a setpoint.
