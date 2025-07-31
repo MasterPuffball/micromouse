@@ -51,7 +51,6 @@ void initLidar() {
 }
 
 int getLeftDist() {
-
   int reading = leftSensor.readRangeSingleMillimeters();
   Serial.println(String("Left: ") + reading);
   return reading;

@@ -4,6 +4,8 @@
 #include <Wire.h>
 #include <MPU6050_light.h>
 
+#define AVERAGE_AMOUNT 5
+
 namespace mtrn3100 {
 
 struct IMUData {
@@ -44,8 +46,13 @@ public:
     }
 
     float getDirection() {
-      read();
-      return z;
+      float direction = 0;
+
+      for (int i = 0; i < AVERAGE_AMOUNT; i++) {
+        direction += read().z;
+      }
+      
+      return direction/AVERAGE_AMOUNT;
     }
 
     float normalizeAngle(float angle) {

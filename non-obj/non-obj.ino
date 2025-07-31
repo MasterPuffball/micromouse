@@ -25,12 +25,12 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 // Controllers
 #define KP1 1.1
-#define KI1 0.1
+#define KI1 0.2
 #define KD1 0.1
 mtrn3100::PIDController left_controller(KP1, KI1, KD1);
 
 #define KP2 1.1
-#define KI2 0.1
+#define KI2 0.2
 #define KD2 0.1
 mtrn3100::PIDController right_controller(KP2, KI2, KD2);
 
@@ -42,7 +42,7 @@ mtrn3100::PIDController diff_controller(KP3, KI3, KD3);
 
 // True direction controller
 #define KP4 1.5
-#define KI4 0.3
+#define KI4 0.05
 #define KD4 0.1
 mtrn3100::PIDController direction_controller(KP4, KI4, KD4);
 
@@ -244,35 +244,41 @@ void maintainDistance(float distance, float speed) {
 }
 
 void loop() {
-//   moveForwardOneCell();
-//   turnToAngle(0,0.5);
-  // maintainDistance(100, 0.5);
+  // moveForwardOneCell();
+  
   // turnToAngle(0,0.5);
-  maintainDistance(100, 0.5);
+  // maintainDistance(100, 0.5); 
+  // turnLeft90();
+  // turnToAngle(90,0.4);
+  // maintainDistance(100, 0.5);
 
   //delay(100);
   // getLeftDist();
   // getFrontDist();
   // getRightDist();
   // turnRight90();
-  // turnLeft90();
-
+  
   
  
-  executeMovementString("lfrfflfr");
+  // executeMovementString("lfrfflfr");
+  executeMovementString("ffllfrfr");
+  // turnToAngle(-90, 0.3);
+  // executeMovementString("r");
   delay(1000);
 }
 
 void moveForwardOneCell() {
-  moveForwardDistance(180.0, 0.5);
+  moveForwardDistance(180.0, 0.3);
 }
 
 void turnLeft90() {
-  turnToAngle(imu.normalizeAngle(imu.getDirection() + 90), 0.5);
+  turnToAngle(imu.normalizeAngle(imu.getDirection() + 90), 0.3);
+  delay(200);
 }
 
 void turnRight90() {
-  turnToAngle(imu.normalizeAngle(imu.getDirection() - 90), 0.5);
+  turnToAngle(imu.normalizeAngle(imu.getDirection() - 90), 0.3);
+  delay(200);
 }
 
 void executeMovementString(char* cmdString) {

@@ -1,6 +1,11 @@
 #pragma once
 
 #include <math.h>
+#define DERIVATIVE_DEADZONE 50
+#define INCREMENT_CLAMP 30
+#define INTEGRAL_CLAMP 100
+
+
 
 namespace mtrn3100 {
 
@@ -17,8 +22,14 @@ public:
 
         error = setpoint - (input - zero_ref);
 
-        integral += min(error,30)*dt;
-        derivative = (error - prev_error) / dt;
+        integral += min(error,INCREMENT_CLAMP)*dt;
+        integral = min(integral, INTEGRAL_CLAMP);
+
+        derivative = 0;
+        if (error >  DERIVATIVE_DEADZONE) {
+            derivative = (error - prev_error) / dt;
+        }
+        
         output = kp * error + ki * integral + kd * derivative;
 
         prev_error = error;
@@ -58,6 +69,16 @@ public:
         if (normalized > 180) {
             normalized -= 360.0;
         }
+
+        if (normalized < -180) {
+            normalized += 360.0;
+        }
+
+        Serial.println(String("angle:") + angle);
+        Serial.println(String("setpoint:") + setpoint);
+        Serial.println(String("normalized:") + normalized);
+
+
 
         return normalized;
     }
