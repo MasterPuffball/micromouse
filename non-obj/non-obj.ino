@@ -12,8 +12,6 @@
 
 #include "Lidar.hpp"
 
-bool screen_initialised = true;
-bool imu_initialised = true;
 int curTime = 0;
 
 struct Robot {
@@ -69,14 +67,25 @@ struct Robot {
   mtrn3100::Encoder left_encoder{MOT1ENCA, MOT1ENCB, 0};
   mtrn3100::Encoder right_encoder{MOT2ENCA, MOT2ENCB, 1};
 
-  // Initialise each wheel
+  // Wheels
   static constexpr float RIGHT_COEF = 0.91;
   static constexpr float LEFT_COEF = 0.95;
   mtrn3100::Wheel left_wheel{&left_motor, &left_encoder};
   mtrn3100::Wheel right_wheel{&right_motor, &right_encoder};
 
-  // Initialise the IMU
+  // IMU
   mtrn3100::IMU imu{Wire};
+
+  // Lidars
+  static constexpr int leftSensorPin = A0;
+  static constexpr int frontSensorPin = A1;
+  static constexpr int rightSensorPin = A2;
+  static constexpr int leftSensorAddress = 0x54;
+  static constexpr int frontSensorAddress = 0x56;
+  static constexpr int rightSensorAddress = 0x58;
+  mtrn3100::Lidar left_lidar{leftSensorPin, leftSensorAddress};
+  mtrn3100::Lidar front_lidar{frontSensorPin, frontSensorAddress};
+  mtrn3100::Lidar right_lidar{rightSensorPin, rightSensorAddress};
 
   // Tuning Prams
   static constexpr float ANGLE_TOLERANCE = 5;
@@ -93,15 +102,36 @@ struct Robot {
   Robot() {
     initScreen();
     initWheels();
-    initIMU();
-    initLidar();
+    imu.begin();
     delay(500);
+  }
+  
+  void loop() {
+    // moveForwardOneCell();
+    
+    // turnToAngle(0,0.5);
+    // maintainDistance(100, 0.5); 
+    // turnLeft90();
+    // turnToAngle(90,0.4);
+    // maintainDistance(100, 0.5);
+
+    //delay(100);
+    // getLeftDist();
+    // getFrontDist();
+    // getRightDist();
+    // turnRight90();
+    drawString("Hello Cro");
+    
+    // executeMovementString("lfrfflfr");
+    // executeMovementString("ffllfrfr");
+    // turnToAngle(-90, 0.3);
+    // executeMovementString("r");
+    delay(1000);
   }
 
   void initScreen() {
     if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
       Serial.println(F("SSD1306 allocation failed"));
-      screen_initialised = false;
     }
     // Clear the buffer
     display.clearDisplay();
@@ -112,12 +142,6 @@ struct Robot {
     // right_motor.flip();
     // left_encoder.flip();
     right_encoder.flip();
-  }
-
-  void initIMU() {
-    if(!imu.begin()) {
-      imu_initialised = false;
-    }
   }
 
   void drawString(String string) {
@@ -212,7 +236,7 @@ struct Robot {
       right_wheel.setSpeed(rightMotorSignal);
 
       if (directionSteady() || millis() - startTime > MAX_DURATION) {
-          break;
+        break;
       }
     }
 
@@ -230,7 +254,7 @@ struct Robot {
 
     while (true) {
       float directionalAdjustment = direction_controller.computeDir(imu.getDirection());
-      float distanceAdjustment = distance_controller.compute(getFrontDist());
+      float distanceAdjustment = distance_controller.compute(front_lidar.get_dist());
 
       float leftMotorSignal = (constrain(-distanceAdjustment, -100, 100) + (directionalAdjustment * DIRECTION_BIAS_STRENGTH)) * speed;
       float rightMotorSignal = (constrain(-distanceAdjustment, -100, 100) - (directionalAdjustment * DIRECTION_BIAS_STRENGTH)) * speed;
@@ -263,30 +287,6 @@ struct Robot {
       }
       delay(500);
     }
-  }
-
-  void loop() {
-    // moveForwardOneCell();
-    
-    // turnToAngle(0,0.5);
-    // maintainDistance(100, 0.5); 
-    // turnLeft90();
-    // turnToAngle(90,0.4);
-    // maintainDistance(100, 0.5);
-
-    //delay(100);
-    // getLeftDist();
-    // getFrontDist();
-    // getRightDist();
-    // turnRight90();
-    
-    
-
-    // executeMovementString("lfrfflfr");
-    executeMovementString("ffllfrfr");
-    // turnToAngle(-90, 0.3);
-    // executeMovementString("r");
-    delay(1000);
   }
 };
 
