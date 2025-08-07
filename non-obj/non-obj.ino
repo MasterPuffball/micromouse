@@ -1,26 +1,21 @@
 #include <SPI.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
+#include <U8g2lib.h>
 
 #include "Encoder.hpp"
 #include "Motor.hpp"
 #include "PIDController.hpp"
 #include "Wheel.hpp"
-
 #include "IMU.hpp"
-
 #include "Lidar.hpp"
 
 int curTime = 0;
+int setCursorFirst = 10;
+int setCursorSecond = 7;
 
 struct Robot {
-  // Display
-  static constexpr int SCREEN_WIDTH = 128; // OLED display width, in pixels
-  static constexpr int SCREEN_HEIGHT = 64; // OLED display height, in pixels
-  static constexpr int OLED_RESET = -1; // Reset pin # (or -1 if sharing Arduino reset pin)
-  static constexpr int SCREEN_ADDRESS = 0x3C; // I2C adress
-  Adafruit_SSD1306 display{SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET};
+  U8G2_SSD1306_128X64_NONAME_1_HW_I2C display{U8G2_R0, U8X8_PIN_NONE};
 
   // Controllers
   static constexpr float KP1 = 1.1;
@@ -100,10 +95,22 @@ struct Robot {
   static constexpr float WALL_DIST = 100;
 
   Robot() {
+  }
+
+  void begin() {
+    Serial.println("Beginning Robot");
     initScreen();
+    Serial.println("Display Setup Complete");
     initWheels();
+    Serial.println("Wheel Setup Complete");
+    delay(100);
     imu.begin();
+    Serial.println("IMU Setup Complete");
     delay(500);
+    Serial.println("Finished Setup");
+    drawString("Finished Setup");
+   
+    delay(250);
   }
   
   void loop() {
@@ -120,21 +127,22 @@ struct Robot {
     // getFrontDist();
     // getRightDist();
     // turnRight90();
-    drawString("Hello Cro");
-    
+    drawFloat(imu.getDirection());
+
     // executeMovementString("lfrfflfr");
     // executeMovementString("ffllfrfr");
     // turnToAngle(-90, 0.3);
     // executeMovementString("r");
-    delay(1000);
+    delay(10);
   }
 
   void initScreen() {
-    if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
-      Serial.println(F("SSD1306 allocation failed"));
-    }
-    // Clear the buffer
-    display.clearDisplay();
+    display.begin();
+    display.clearBuffer(); // Clear the internal memory
+    display.setFont(u8g2_font_6x12_mf); // Choose a suitable font
+    display.setCursor(setCursorFirst, setCursorSecond);
+    display.print("Staring!!!"); // Write a string to the display
+    display.sendBuffer(); // Transfer internal memory to the display
   }
 
   void initWheels() {
@@ -144,15 +152,16 @@ struct Robot {
     right_encoder.flip();
   }
 
-  void drawString(String string) {
-    display.clearDisplay();
+  void drawFloat(float num) {
+    String message = String(num, 1);
+    drawString(message.c_str());
+  }
 
-    display.setTextSize(1);             // Normal 1:1 pixel scale
-    display.setTextColor(SSD1306_WHITE);        // Draw white text
-    display.setCursor(0,0);             // Start at top-left corner
-    display.println(string);
-
-    display.display();
+  void drawString(const char* message) {
+    display.clearBuffer(); // Clear the internal memory
+    display.setCursor(setCursorFirst, setCursorSecond); // Set the cursor to the start position
+    display.print(message); // Print the message
+    display.sendBuffer(); // Transfer internal memory to the display
   }
 
   bool directionSteady() {
@@ -164,7 +173,7 @@ struct Robot {
   }
 
   bool leftPosSteady() {
-    if (abs(left_controller.getError()) < DIST_TOLERANCE && abs(left_controller.getDerivative() < SLOPE_TOLERANCE)) {
+    if (abs(left_controller.getError()) < DIST_TOLERANCE && abs(left_controller.getDerivative()) < SLOPE_TOLERANCE) {
       return true;
     }
     Serial.println("LEFT NOT STEADY");
@@ -172,7 +181,7 @@ struct Robot {
   }
 
   bool rightPosSteady() {
-    if (abs(right_controller.getError()) < DIST_TOLERANCE && abs(right_controller.getDerivative() < SLOPE_TOLERANCE)) {
+    if (abs(right_controller.getError()) < DIST_TOLERANCE && abs(right_controller.getDerivative()) < SLOPE_TOLERANCE) {
       return true;
     }
     Serial.println("RIGHT NOT STEADY");
@@ -222,7 +231,10 @@ struct Robot {
     long startTime = millis();
 
     while (true) {
-      float directionalAdjustment = direction_controller.computeDir(imu.getDirection());
+      float direction = imu.getDirection();
+      float directionalAdjustment = direction_controller.computeDir(direction);
+      Serial.println(direction);
+      drawFloat(direction);
 
       float leftDiff = left_wheel.getDistanceMoved() - leftZero;
       float rightDiff = -(right_wheel.getDistanceMoved() - rightZero);
@@ -234,7 +246,7 @@ struct Robot {
 
       left_wheel.setSpeed(leftMotorSignal);
       right_wheel.setSpeed(rightMotorSignal);
-
+      
       if (directionSteady() || millis() - startTime > MAX_DURATION) {
         break;
       }
@@ -293,9 +305,14 @@ struct Robot {
 void setup() {
   Wire.begin();
   Serial.begin(9600);
-  delay(1000);
+  Serial.println("Beginning Setup");
+  delay(50);
   Robot robot{};
+
+  robot.begin();
   
+  delay(100);
+
   while (true) {
     robot.loop();
   }

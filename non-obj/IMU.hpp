@@ -19,6 +19,7 @@ public:
     IMU(TwoWire& wire = Wire) : mpu(wire) {}
 
     bool begin() {
+      Serial.println("Beginning IMU");
       if (mpu.begin() != 0) {
         Serial.println(F("IMU init failed"));
         return false;
