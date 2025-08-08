@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 #include <Wire.h>
-#include <MPU6050_light.h>
+#include "MPU6050_light.h"
 
 #define AVERAGE_AMOUNT 5
 
@@ -20,7 +20,7 @@ public:
 
     bool begin() {
       Serial.println("Beginning IMU");
-      if (mpu.begin() != 0) {
+      if (mpu.begin(3,3) != 0) {
         Serial.println(F("IMU init failed"));
         return false;
       }

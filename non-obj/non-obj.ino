@@ -69,7 +69,7 @@ struct Robot {
   mtrn3100::Wheel right_wheel{&right_motor, &right_encoder};
 
   // IMU
-  mtrn3100::IMU imu{Wire};
+  mtrn3100::IMU imu{};
 
   // Lidars
   static constexpr int leftSensorPin = A0;
@@ -99,13 +99,14 @@ struct Robot {
 
   void begin() {
     Serial.println("Beginning Robot");
-    initScreen();
-    Serial.println("Display Setup Complete");
+    imu.begin();
+    Serial.println("IMU Setup Complete");
     initWheels();
     Serial.println("Wheel Setup Complete");
     delay(100);
-    imu.begin();
-    Serial.println("IMU Setup Complete");
+    initScreen();
+    Serial.println("Display Setup Complete");
+    
     delay(500);
     Serial.println("Finished Setup");
     drawString("Finished Setup");
@@ -118,7 +119,7 @@ struct Robot {
     
     // turnToAngle(0,0.5);
     // maintainDistance(100, 0.5); 
-    // turnLeft90();
+    turnLeft90();
     // turnToAngle(90,0.4);
     // maintainDistance(100, 0.5);
 
@@ -127,13 +128,15 @@ struct Robot {
     // getFrontDist();
     // getRightDist();
     // turnRight90();
+
+    Serial.println(imu.getDirection());
     drawFloat(imu.getDirection());
 
     // executeMovementString("lfrfflfr");
     // executeMovementString("ffllfrfr");
     // turnToAngle(-90, 0.3);
     // executeMovementString("r");
-    delay(10);
+
   }
 
   void initScreen() {
