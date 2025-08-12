@@ -27,7 +27,7 @@
 // Encoder Odometry
 #define WHEEL_DIAMETER 32.4f //In millimeters
 #define WHEEL_RADIUS (WHEEL_DIAMETER / 2.0)
-#define AXLE_LENGTH 87.2f //In millimeters
+#define AXLE_LENGTH 84 //In millimeters
 #define TICKS_PER_REV 700
 #define WHEEL_CIRCUM (WHEEL_DIAMETER * 3.14159)
 #define MM_PER_TICK (WHEEL_CIRCUM / TICKS_PER_REV)

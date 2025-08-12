@@ -28,8 +28,6 @@ namespace mtrn3100 {
       }
 
       void update() {
-        if (millis() - lastUpdateTime < ODOM_POLL_TIME) return;
-
         leftTicks = leftEncoder->getCount() - leftZero;
         rightTicks = rightEncoder->getCount() - rightZero;
 
