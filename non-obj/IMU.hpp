@@ -3,8 +3,7 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include "MPU6050_light.h"
-
-#define AVERAGE_AMOUNT 5
+#include "Constants.h"
 
 namespace mtrn3100 {
 
@@ -49,11 +48,11 @@ public:
     float getDirection() {
       float direction = 0;
 
-      for (int i = 0; i < AVERAGE_AMOUNT; i++) {
+      for (int i = 0; i < IMU_AVERAGE_AMOUNT; i++) {
         direction += read().z;
       }
       
-      return direction/AVERAGE_AMOUNT;
+      return direction/IMU_AVERAGE_AMOUNT;
     }
 
     float normalizeAngle(float angle) {
