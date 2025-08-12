@@ -9,12 +9,16 @@
 #include "Wheel.hpp"
 #include "IMU.hpp"
 #include "Lidar.hpp"
+#include "EncoderOdometry.hpp"
+#include "Constants.h"
+
 
 #include "MapRenderer.hpp"
 
 int curTime = 0;
 int setCursorFirst = 10;
 int setCursorSecond = 7;
+float general_speed = 0.45;
 
 struct Robot {
   U8G2_SSD1306_128X64_NONAME_1_HW_I2C display{U8G2_R0, U8X8_PIN_NONE};
@@ -37,10 +41,10 @@ struct Robot {
   mtrn3100::PIDController diff_controller{KP3, KI3, KD3};
 
   // True direction controller
-  static constexpr float KP4 = 1.5;
-  static constexpr float KI4 = 0.05;
+  static constexpr float KP4 = 2.3;
+  static constexpr float KI4 = 0.8;
   static constexpr float KD4 = 0.08;
-  mtrn3100::PIDController direction_controller{KP4, KI4, KD4};
+  mtrn3100::PIDController direction_controller{KP4, KI4, KD4, true};
 
   // Distance Controller
   static constexpr float KP5 = 1.5;
@@ -63,6 +67,7 @@ struct Robot {
   static constexpr int MOT2ENCB = 8;
   mtrn3100::Encoder left_encoder{MOT1ENCA, MOT1ENCB, 0};
   mtrn3100::Encoder right_encoder{MOT2ENCA, MOT2ENCB, 1};
+  mtrn3100::EncoderOdometry odom{&left_encoder, &right_encoder};
 
   // Wheels
   static constexpr float RIGHT_COEF = 0.91;
@@ -84,39 +89,33 @@ struct Robot {
   mtrn3100::Lidar front_lidar{frontSensorPin, frontSensorAddress};
   mtrn3100::Lidar right_lidar{rightSensorPin, rightSensorAddress};
 
-  // Tuning Prams
-  static constexpr float ANGLE_TOLERANCE = 5;
-  static constexpr float DIST_TOLERANCE = 5;
-  static constexpr float DIFF_TOLERANCE = 3;
-  static constexpr float SLOPE_TOLERANCE = 0.02;
-  static constexpr float DIRECTION_BIAS_STRENGTH = 0.75;
-  static constexpr float DIFF_BIAS_STRENGTH = 0;
-  static constexpr int MAX_DURATION = 10000; // in millis
-  float general_speed = 0.3;
-
-  // Wall following constants
-  static constexpr float WALL_DIST = 100;
-
   Robot() {
   }
 
   void begin() {
     Serial.println("Beginning Robot");
-    imu.begin();
-    Serial.println("IMU Setup Complete");
-    initWheels();
-    Serial.println("Wheel Setup Complete");
-    delay(100);
+
     initScreen();
     Serial.println("Display Setup Complete");
-    
-    delay(500);
+    drawString("Display Setup Complete");
+
+    delay(50);
+  
+    imu.begin();
+    Serial.println("IMU Setup Complete");
+    drawString("IMU Setup Complete");
+
+    odom.begin();
+
+    delay(50);
+
+    initWheels();
+    Serial.println("Wheel Setup Complete");
+    drawString("Wheel Setup Complete");
+        
+    delay(50);
     Serial.println("Finished Setup");
     drawString("Finished Setup");
-   
-    delay(250);
-
-    // i = KD4;
   }
   
   void loop() {
@@ -139,8 +138,7 @@ struct Robot {
     // getFrontDist();
     // getRightDist();
     turnRight90();
-    // i+= 0.01;
-
+    // drawTelemetry(direction_controller);
     // testPrintLines();
     // Serial.println(imu.getDirection());
 
@@ -180,11 +178,10 @@ struct Robot {
       drawTextValueLine("Error:",      controller.getError(),      0, startY + lineHeight * 1);
       drawTextValueLine("Derivative:", controller.getDerivative(), 0, startY + lineHeight * 2);
       drawTextValueLine("Integral:",   controller.getIntegral(),   0, startY + lineHeight * 3);
-      drawTextValueLine("P:",          controller.getP(),          0, startY + lineHeight * 4);
-      drawTextValueLine("I:",          controller.getI(),          0, startY + lineHeight * 5);
-      drawTextValueLine("D:",          controller.getD(),          0, startY + lineHeight * 6);
-      drawTextValueLine("Target:",     controller.getTarget(),     0, startY + lineHeight * 7);
-      drawTextValueLine("Zero:",       controller.getZero(),       0, startY + lineHeight * 8);
+      drawTextValueLine("Target:",     controller.getTarget(),     0, startY + lineHeight * 4);
+      drawTextValueLine("Zero:",       controller.getZero(),       0, startY + lineHeight * 5);
+      drawTextValueLine("Odom θ:",     odom.getTheta(),            0, startY + lineHeight * 6);
+
     } while (display.nextPage());
   }
 
@@ -216,30 +213,6 @@ struct Robot {
     display.sendBuffer(); // Transfer internal memory to the display
   }
 
-  bool directionSteady() {
-    if (abs(direction_controller.getError()) < ANGLE_TOLERANCE && abs(direction_controller.getDerivative() < SLOPE_TOLERANCE)) {
-      return true;
-    }
-    Serial.println("DIRECTION NOT STEADY");
-    return false;
-  }
-
-  bool leftPosSteady() {
-    if (abs(left_controller.getError()) < DIST_TOLERANCE && abs(left_controller.getDerivative()) < SLOPE_TOLERANCE) {
-      return true;
-    }
-    Serial.println("LEFT NOT STEADY");
-    return false;
-  }
-
-  bool rightPosSteady() {
-    if (abs(right_controller.getError()) < DIST_TOLERANCE && abs(right_controller.getDerivative()) < SLOPE_TOLERANCE) {
-      return true;
-    }
-    Serial.println("RIGHT NOT STEADY");
-    return false;
-  }
-
   void moveForwardDistance(uint16_t dist, float speed) {
     // Set to stay in the current direction
     float startDirection = imu.getDirection();
@@ -252,7 +225,8 @@ struct Robot {
     long startTime = millis();
 
     while (true) {
-      float directionalAdjustment = direction_controller.computeDir(imu.getDirection());
+      drawTelemetry(left_controller);
+      float directionalAdjustment = direction_controller.compute(imu.getDirection());
       float leftSignal = left_controller.compute(left_wheel.getDistanceMoved());
       float rightSignal = right_controller.compute(right_wheel.getDistanceMoved());
 
@@ -262,7 +236,7 @@ struct Robot {
       left_wheel.setSpeed(leftMotorSignal);
       right_wheel.setSpeed(rightMotorSignal);
 
-      if ((directionSteady() && leftPosSteady() && rightPosSteady()) || millis() - startTime > MAX_DURATION) {
+      if ((direction_controller.isWithin(10) && left_controller.isWithin(DIST_TOLERANCE) && right_controller.isWithin(DIST_TOLERANCE)) || millis() - startTime > MAX_DURATION) {
         break;
       }
     }
@@ -284,8 +258,9 @@ struct Robot {
 
     while (true) {
       drawTelemetry(direction_controller);
+      float theta = odom.getTheta();
       float direction = imu.getDirection();
-      float directionalAdjustment = direction_controller.computeDir(direction);
+      float directionalAdjustment = direction_controller.compute(direction);
       // Serial.println(direction);
       // drawFloat(direction);
 
@@ -300,7 +275,7 @@ struct Robot {
       left_wheel.setSpeed(leftMotorSignal);
       right_wheel.setSpeed(rightMotorSignal);
       
-      if (directionSteady() || millis() - startTime > MAX_DURATION) {
+      if (direction_controller.isWithin(ANGLE_TOLERANCE) || millis() - startTime > MAX_DURATION) {
         break;
       }
     }
@@ -318,7 +293,7 @@ struct Robot {
     distance_controller.zeroAndSetTarget(0, distance);
 
     while (true) {
-      float directionalAdjustment = direction_controller.computeDir(imu.getDirection());
+      float directionalAdjustment = direction_controller.compute(imu.getDirection());
       float distanceAdjustment = distance_controller.compute(front_lidar.get_dist());
 
       float leftMotorSignal = (constrain(-distanceAdjustment, -100, 100) + (directionalAdjustment * DIRECTION_BIAS_STRENGTH)) * speed;

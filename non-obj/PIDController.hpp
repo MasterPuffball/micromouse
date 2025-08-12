@@ -1,94 +1,64 @@
 #pragma once
 
 #include <math.h>
-#define DERIVATIVE_DEADZONE 50
-#define INCREMENT_CLAMP 30
-#define INTEGRAL_CLAMP 100
-
-
+#include "Constants.h"
 
 namespace mtrn3100 {
 
 class PIDController {
 public:
-    PIDController(float kp, float ki, float kd) : kp(kp), ki(ki), kd(kd) {}
+    PIDController(float kp, float ki, float kd, float isDir = false) : kp(kp), ki(ki), kd(kd), isDir(isDir) {}
 
     // Compute the output signal required from the current/actual value.
     // Outputs positive if wants to move forward
     float compute(float input) {
-        curr_time = micros();
-        dt = static_cast<float>(curr_time - prev_time) / 1e6;
-        prev_time = curr_time;
+      curr_time = micros();
+      dt = static_cast<float>(curr_time - prev_time) / 1e6;
+      prev_time = curr_time;
 
-        error = setpoint - (input - zero_ref);
-
-        integral += min(error,INCREMENT_CLAMP)*dt;
-        integral = min(integral, INTEGRAL_CLAMP);
-
-        derivative = 0;
-        if (error >  DERIVATIVE_DEADZONE) {
-            derivative = (error - prev_error) / dt;
-        }
-        
-        output = kp * error + ki * integral + kd * derivative;
-
-        prev_error = error;
-        // Serial.println(String("Input is: ") + input);
-        // Serial.println(String("Current error: ") + kp*error);
-        // Serial.println(String("Current integral: ") + ki*integral);
-        // Serial.println(String("Current differential: ") + kd*derivative);
-
-        return output;
-    }
-
-
-    // Outputs positive if wants to turn left
-    float computeDir(float input) {
-        curr_time = micros();
-        dt = static_cast<float>(curr_time - prev_time) / 1e6;
-        prev_time = curr_time;
-
+      // Outputs positive if wants to turn left
+      if (isDir) {
         error = getDirError(input);
-        
-        integral += min(error,INCREMENT_CLAMP)*dt;
-        integral = min(integral, INTEGRAL_CLAMP);
+      }
+      else {
+        error = setpoint - (input - zero_ref);
+      }
+      
+      integral += constrain(error, -INCREMENT_CLAMP, INCREMENT_CLAMP) * dt;
+      integral = constrain(integral, -INTEGRAL_CLAMP, INTEGRAL_CLAMP);
 
+      derivative = 0;
+      if (fabs(error) >  DERIVATIVE_DEADZONE) {
         derivative = (error - prev_error) / dt;
-        output = kp * error + ki * integral + kd * derivative;
+      }
+      
+      output = kp * error + ki * integral + kd * derivative;
 
-        prev_error = error;
-        // Serial.println(String("Input is: ") + input);
-        // Serial.println(String("Current Dir error: ") + kp*error);
-        // Serial.println(String("Current Dir integral: ") + ki*integral);
-        // Serial.println(String("Current Dir differential: ") + kd*derivative);
+      prev_error = error;
 
-        return output;
+      recordError(error);
+
+      return output;
     }
 
     float getDirError(float angle) {
-        float normalized = fmod(angle - setpoint, 360.0f);
+      float normalized = fmod(angle - setpoint, 360.0f);
 
-        if (normalized > 180) {
-            normalized -= 360.0;
-        }
+      if (normalized > 180) {
+        normalized -= 360.0;
+      }
 
-        if (normalized < -180) {
-            normalized += 360.0;
-        }
+      if (normalized < -180) {
+        normalized += 360.0;
+      }
 
-        Serial.println(String("angle:") + angle);
-        Serial.println(String("setpoint:") + setpoint);
-        Serial.println(String("normalized:") + normalized);
-
-
-
-        return normalized;
+      return normalized;
     }
 
     void tune(float p, float i, float d) {
-        kp = p;
-        ki = i;
-        kd = d;
+      kp = p;
+      ki = i;
+      kd = d;
     }
 
     // Function used to return the last calculated error. 
@@ -125,6 +95,15 @@ public:
       return zero_ref;
     }
 
+    int getErrorSampleCount() {
+      return errorIndex;
+    }
+
+    float getErrorAtIndex(int idx) {
+      if (idx < 0 || idx >= NUM_STEADY) return 0.0f;
+      return errorHistory[idx];
+    }
+
     // This must be called before trying to achieve a setpoint.
     // The first argument becomes the new zero reference point.
     // Target is the setpoint value.
@@ -133,21 +112,70 @@ public:
       zero_ref = zero;
       setpoint = target;
 
-      error = target-zero; 
+      if (isDir) {
+        error = getDirError(zero);
+      } else {
+        error = target - zero;
+      }
+
       integral = 0;
       derivative = 0;
+
+      clearErrorHistory();
+    }
+
+    bool isWithin(float tolerance) {
+      return isSteady() && abs(error) < tolerance;
+    }
+
+    bool isSteady() const {
+      if (errorIndex < NUM_STEADY) {
+        return false; // not enough samples yet
+      }
+
+      float minError = errorHistory[0];
+      float maxError = errorHistory[0];
+
+      for (int i = 0; i < NUM_STEADY; i++) {
+        if (errorHistory[i] < minError) {
+          minError = errorHistory[i];
+        }
+        if (errorHistory[i] > maxError) {
+          maxError = errorHistory[i];
+        }
+      }
+
+      return (maxError - minError) <= STEADY_TOLERANCE;
+    }
+
+    void recordError(float newError) {
+      errorHistory[errorIndex % NUM_STEADY] = newError;
+      errorIndex++;
+    }
+
+    void clearErrorHistory() {
+      errorIndex = 0;
+
+      for (int i = 0; i < NUM_STEADY; i++) {
+        errorHistory[i] = 0;
+      }
     }
 
 public:
-    uint32_t prev_time, curr_time = micros();
+    uint32_t prev_time = micros();
+    uint32_t curr_time = micros();
     float dt;
 
 private:
     float kp, ki, kd;
+    bool isDir;
     float error, derivative, integral, output;
     float prev_error = 0;
     float setpoint = 0;
     float zero_ref = 0;
+    
+    float errorHistory[NUM_STEADY] = {0};
+    int errorIndex = 0;
 };
 
 }  // namespace mtrn3100
