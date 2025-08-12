@@ -10,13 +10,15 @@
 #include "IMU.hpp"
 #include "Lidar.hpp"
 
+#include "MapRenderer.hpp"
+
 int curTime = 0;
 int setCursorFirst = 10;
 int setCursorSecond = 7;
 
 struct Robot {
   U8G2_SSD1306_128X64_NONAME_1_HW_I2C display{U8G2_R0, U8X8_PIN_NONE};
-
+  MapRenderer mapRenderer{display};
   // Controllers
   static constexpr float KP1 = 1.1;
   static constexpr float KI1 = 0.2;
@@ -116,10 +118,15 @@ struct Robot {
   
   void loop() {
     // moveForwardOneCell();
-    
+display.firstPage();
+do {
+    mapRenderer.drawCompletion();
+} while (display.nextPage());
+
+
     // turnToAngle(0,0.5);
     // maintainDistance(100, 0.5); 
-    turnLeft90();
+    //turnLeft90();
     // turnToAngle(90,0.4);
     // maintainDistance(100, 0.5);
 
@@ -129,9 +136,8 @@ struct Robot {
     // getRightDist();
     // turnRight90();
 
-    Serial.println(imu.getDirection());
-    drawFloat(imu.getDirection());
-
+//    Serial.println(imu.getDirection());
+//    drawFloat(imu.getDirection());
     // executeMovementString("lfrfflfr");
     // executeMovementString("ffllfrfr");
     // turnToAngle(-90, 0.3);
