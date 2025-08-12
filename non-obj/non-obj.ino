@@ -39,7 +39,7 @@ struct Robot {
   // True direction controller
   static constexpr float KP4 = 1.5;
   static constexpr float KI4 = 0.05;
-  static constexpr float KD4 = 0.1;
+  static constexpr float KD4 = 0.08;
   mtrn3100::PIDController direction_controller{KP4, KI4, KD4};
 
   // Distance Controller
@@ -92,6 +92,7 @@ struct Robot {
   static constexpr float DIRECTION_BIAS_STRENGTH = 0.75;
   static constexpr float DIFF_BIAS_STRENGTH = 0;
   static constexpr int MAX_DURATION = 10000; // in millis
+  float general_speed = 0.3;
 
   // Wall following constants
   static constexpr float WALL_DIST = 100;
@@ -114,15 +115,17 @@ struct Robot {
     drawString("Finished Setup");
    
     delay(250);
+
+    // i = KD4;
   }
   
   void loop() {
     // moveForwardOneCell();
     
-    display.firstPage();
-    do {
-      mapRenderer.drawCompletion();
-    } while (display.nextPage());
+    // display.firstPage();
+    // do {
+    //   mapRenderer.drawCompletion();
+    // } while (display.nextPage());
 
 
     // turnToAngle(0,0.5);
@@ -130,15 +133,18 @@ struct Robot {
     //turnLeft90();
     // turnToAngle(90,0.4);
     // maintainDistance(100, 0.5);
-
+    // direction_controller.tune(KP4, KI4, i);
     //delay(100);
     // getLeftDist();
     // getFrontDist();
     // getRightDist();
-    // turnRight90();
+    turnRight90();
+    // i+= 0.01;
 
-//    Serial.println(imu.getDirection());
-//    drawFloat(imu.getDirection());
+    // testPrintLines();
+    // Serial.println(imu.getDirection());
+
+
     // executeMovementString("lfrfflfr");
     // executeMovementString("ffllfrfr");
     // turnToAngle(-90, 0.3);
@@ -162,14 +168,50 @@ struct Robot {
     right_encoder.flip();
   }
 
-  void drawFloat(float num) {
-    String message = String(num, 1);
-    drawString(message.c_str());
+  void drawTelemetry(mtrn3100::PIDController controller) {
+    display.firstPage();
+    do {
+      display.setFont(u8g2_font_4x6_tr); // very small font, 4px tall
+
+      int lineHeight = 6; // 4px font + ~2px spacing
+      int startY = 6;     // top margin
+
+      drawTextValueLine("IMU:",        imu.getDirection(),         0, startY + lineHeight * 0);
+      drawTextValueLine("Error:",      controller.getError(),      0, startY + lineHeight * 1);
+      drawTextValueLine("Derivative:", controller.getDerivative(), 0, startY + lineHeight * 2);
+      drawTextValueLine("Integral:",   controller.getIntegral(),   0, startY + lineHeight * 3);
+      drawTextValueLine("P:",          controller.getP(),          0, startY + lineHeight * 4);
+      drawTextValueLine("I:",          controller.getI(),          0, startY + lineHeight * 5);
+      drawTextValueLine("D:",          controller.getD(),          0, startY + lineHeight * 6);
+      drawTextValueLine("Target:",     controller.getTarget(),     0, startY + lineHeight * 7);
+      drawTextValueLine("Zero:",       controller.getZero(),       0, startY + lineHeight * 8);
+    } while (display.nextPage());
   }
 
-  void drawString(const char* message) {
+  void drawTextValueLine(const char* message, float num, int x, int y) {
+    display.setCursor(x, y);
+    display.print(message);
+    drawFloatNoClear(num, x + 64, y);
+  }
+
+  void drawStringNoClear(const char* message, int x, int y) {
+    display.setCursor(x, y);
+    display.print(message);
+  }
+
+  void drawFloatNoClear(float num, int x, int y) {
+    String message = String(num, 1);
+    drawStringNoClear(message.c_str(), x, y);
+  }
+
+  void drawFloat(float num, const int x = setCursorFirst, const int y = setCursorSecond) {
+    String message = String(num, 1);
+    drawString(message.c_str(), x, y);
+  }
+
+  void drawString(const char* message, const int x = setCursorFirst, const int y = setCursorSecond) {
     display.clearBuffer(); // Clear the internal memory
-    display.setCursor(setCursorFirst, setCursorSecond); // Set the cursor to the start position
+    display.setCursor(x, y); // Set the cursor to the start position
     display.print(message); // Print the message
     display.sendBuffer(); // Transfer internal memory to the display
   }
@@ -241,10 +283,11 @@ struct Robot {
     long startTime = millis();
 
     while (true) {
+      drawTelemetry(direction_controller);
       float direction = imu.getDirection();
       float directionalAdjustment = direction_controller.computeDir(direction);
-      Serial.println(direction);
-      drawFloat(direction);
+      // Serial.println(direction);
+      // drawFloat(direction);
 
       float leftDiff = left_wheel.getDistanceMoved() - leftZero;
       float rightDiff = -(right_wheel.getDistanceMoved() - rightZero);
@@ -287,16 +330,16 @@ struct Robot {
   }
 
   void moveForwardOneCell() {
-    moveForwardDistance(180.0, 0.3);
+    moveForwardDistance(180.0, general_speed);
   }
 
   void turnLeft90() {
-    turnToAngle(imu.normalizeAngle(imu.getDirection() + 90), 0.3);
+    turnToAngle(imu.normalizeAngle(imu.getDirection() + 90), general_speed);
     delay(200);
   }
 
   void turnRight90() {
-    turnToAngle(imu.normalizeAngle(imu.getDirection() - 90), 0.3);
+    turnToAngle(imu.normalizeAngle(imu.getDirection() - 90), general_speed);
     delay(200);
   }
 

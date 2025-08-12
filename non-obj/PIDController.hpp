@@ -50,7 +50,9 @@ public:
 
         error = getDirError(input);
         
-        integral += min(error,30)*dt;
+        integral += min(error,INCREMENT_CLAMP)*dt;
+        integral = min(integral, INTEGRAL_CLAMP);
+
         derivative = (error - prev_error) / dt;
         output = kp * error + ki * integral + kd * derivative;
 
@@ -96,7 +98,31 @@ public:
     }
 
     float getDerivative() {
-        return derivative;
+      return derivative;
+    }
+
+    float getIntegral() {
+      return integral;
+    }
+
+    float getP() {
+      return kp;
+    }
+
+    float getI() {
+      return ki;
+    }
+
+    float getD() {
+      return kd;
+    }
+
+    float getTarget() {
+      return setpoint;
+    }
+
+    float getZero() {
+      return zero_ref;
     }
 
     // This must be called before trying to achieve a setpoint.
