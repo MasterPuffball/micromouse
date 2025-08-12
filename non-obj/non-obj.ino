@@ -118,10 +118,11 @@ struct Robot {
   
   void loop() {
     // moveForwardOneCell();
-display.firstPage();
-do {
-    mapRenderer.drawCompletion();
-} while (display.nextPage());
+    
+    display.firstPage();
+    do {
+      mapRenderer.drawCompletion();
+    } while (display.nextPage());
 
 
     // turnToAngle(0,0.5);

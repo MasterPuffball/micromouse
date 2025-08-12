@@ -6,7 +6,7 @@ public:
     MapRenderer(U8G2 &display);
     void drawGrid();
     void drawCompletion();
-    float getCompletionPercentage() const;
+    float getCompletionPercentage();
 
 private:
     U8G2 &u8g2;

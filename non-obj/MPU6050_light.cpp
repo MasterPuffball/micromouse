@@ -189,7 +189,7 @@ void MPU6050::fetchData(){
 }
 
 void MPU6050::update(){
-  if (millis() - preInterval < 3) return;
+  if (millis() - preInterval < 1) return;
   // retrieve raw data
   this->fetchData();
   
