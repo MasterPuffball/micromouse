@@ -258,8 +258,9 @@ struct Robot {
 
     while (true) {
       drawTelemetry(direction_controller);
-      float theta = odom.getTheta();
+      
       float direction = imu.getDirection();
+      direction = odom.getTheta();
       float directionalAdjustment = direction_controller.compute(direction);
       // Serial.println(direction);
       // drawFloat(direction);
