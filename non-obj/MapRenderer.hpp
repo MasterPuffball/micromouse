@@ -30,6 +30,8 @@ private:
     // Wall storage
     bool horizontalWalls[gridSize][gridSize] = {{false}};
     bool verticalWalls[gridSize][gridSize] = {{false}};
+    bool horizontalWalls[gridSize + 1][gridSize] = {{false}}; // horizontal walls: between rows
+    bool verticalWalls[gridSize][gridSize + 1] = {{false}};   // vertical walls: between columns
 
     void drawDot(uint8_t x, uint8_t y);
     void drawWalls();

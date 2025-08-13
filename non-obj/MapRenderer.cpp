@@ -40,6 +40,37 @@ void MapRenderer::drawWalls() {
     }
 }
 
+void MapRenderer::updateWalls(bool wallFront, bool wallLeft, bool wallRight) {
+    // Mark visited
+    if (!mazeVisited[robotY][robotX]) {
+        mazeVisited[robotY][robotX] = true;
+        visited_cells_count++;
+    }
+    // Orientation-based mapping
+    // 0=up, 1=right, 2=down, 3=left
+    if (robotDir == 0) { // facing up
+        if (wallFront) horizontalWalls[robotY][robotX] = true;           // north wall
+        if (wallLeft)  verticalWalls[robotY][robotX] = true;             // west wall
+        if (wallRight) verticalWalls[robotY][robotX+1] = true;           // east wall
+    }
+    else if (robotDir == 1) { // facing right
+        if (wallFront) verticalWalls[robotY][robotX+1] = true;           // east wall
+        if (wallLeft)  horizontalWalls[robotY][robotX] = true;           // north wall
+        if (wallRight) horizontalWalls[robotY+1][robotX] = true;         // south wall
+    }
+    else if (robotDir == 2) { // facing down
+        if (wallFront) horizontalWalls[robotY+1][robotX] = true;         // south wall
+        if (wallLeft)  verticalWalls[robotY][robotX+1] = true;           // east wall
+        if (wallRight) verticalWalls[robotY][robotX] = true;             // west wall
+    }
+    else if (robotDir == 3) { // facing left
+        if (wallFront) verticalWalls[robotY][robotX] = true;             // west wall
+        if (wallLeft)  horizontalWalls[robotY+1][robotX] = true;         // south wall
+        if (wallRight) horizontalWalls[robotY][robotX] = true;           // north wall
+    }
+}
+
+
 float MapRenderer::getCompletionPercentage() {
     return ((visited_cells_count) / (MAZE_SIZE * MAZE_SIZE)) * 100.0f;
 }
@@ -55,5 +86,14 @@ void MapRenderer::drawCompletion() {
 
 void MapRenderer::drawMap() {
     drawGrid();
-    drawRobot();
+	drawWalls();
 }
+
+//bool wallFront = getFrontDist() < 90;
+//bool wallLeft  = getLeftDist()  < 90;
+//bool wallRight = getRightDist() < 90;
+
+//mapRenderer.updateWalls(wallFront, wallLeft, wallRight);
+//mapRenderer.setRobotPosition(currentX, currentY, currentDir);
+//mapRenderer.drawCompletion(); // updates display
+//u8g2.sendBuffer();
