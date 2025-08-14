@@ -12,7 +12,6 @@
 #include "EncoderOdometry.hpp"
 #include "Constants.h"
 
-
 #include "MapRenderer.hpp"
 
 int curTime = 0;
@@ -137,7 +136,7 @@ struct Robot {
     // getLeftDist();
     // getFrontDist();
     // getRightDist();
-    turnRight90();
+    // turnRight90();
     // drawTelemetry(direction_controller);
     // testPrintLines();
     // Serial.println(imu.getDirection());
