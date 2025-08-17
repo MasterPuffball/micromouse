@@ -64,11 +64,11 @@ public:
     void printCurrentData() {
       read();
       
-      Serial.print("X : ");
+      Serial.print(F("X : "));
       Serial.print(x);
-      Serial.print("\tY : ");
+      Serial.print(F("\tY : "));
       Serial.print(y);
-      Serial.print("\tZ : ");
+      Serial.print(F("\tZ : "));
       Serial.println(z);
     }
 
