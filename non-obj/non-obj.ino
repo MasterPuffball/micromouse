@@ -1,6 +1,5 @@
 #include <SPI.h>
 #include <Wire.h>
-#include <Adafruit_GFX.h>
 #include <U8g2lib.h>
 
 #include "Encoder.hpp"
@@ -9,6 +8,7 @@
 #include "Wheel.hpp"
 #include "IMU.hpp"
 #include "Lidar.hpp"
+#include "Map.hpp"
 #include "EncoderOdometry.hpp"
 #include "Constants.h"
 
@@ -21,6 +21,7 @@ float general_speed = 0.45;
 
 struct Robot {
   U8G2_SSD1306_128X64_NONAME_1_HW_I2C display{U8G2_R0, U8X8_PIN_NONE};
+  mtrn3100::Map map{};
   MapRenderer mapRenderer{display};
   // Controllers
   static constexpr float KP1 = 1.1;
@@ -88,20 +89,24 @@ struct Robot {
   mtrn3100::Lidar front_lidar{frontSensorPin, frontSensorAddress};
   mtrn3100::Lidar right_lidar{rightSensorPin, rightSensorAddress};
 
+  int robotX = STARTING_X;
+  int robotY = STARTING_Y;
+  int robotOrientation = STARTING_ORIENTATION;
+
   Robot() {
   }
 
   void begin() {
-    Serial.println("Beginning Robot");
+    Serial.println(F("Beginning Robot"));
 
     initScreen();
-    Serial.println("Display Setup Complete");
+    Serial.println(F("Display Setup Complete"));
     drawString("Display Setup Complete");
 
     delay(50);
   
     imu.begin();
-    Serial.println("IMU Setup Complete");
+    Serial.println(F("IMU Setup Complete"));
     drawString("IMU Setup Complete");
 
     odom.begin();
@@ -109,11 +114,11 @@ struct Robot {
     delay(50);
 
     initWheels();
-    Serial.println("Wheel Setup Complete");
+    Serial.println(F("Wheel Setup Complete"));
     drawString("Wheel Setup Complete");
         
     delay(50);
-    Serial.println("Finished Setup");
+    Serial.println(F("Finished Setup"));
     drawString("Finished Setup");
   }
   
@@ -124,7 +129,9 @@ struct Robot {
     // do {
     //   mapRenderer.drawCompletion();
     // } while (display.nextPage());
-
+    exploreMap();
+    mapRenderer.drawMap();
+	  while (true) {}
 
     // turnToAngle(0,0.5);
     // maintainDistance(100, 0.5); 
@@ -152,7 +159,7 @@ struct Robot {
   void initScreen() {
     display.begin();
     display.clearBuffer(); // Clear the internal memory
-    display.setFont(u8g2_font_6x12_mf); // Choose a suitable font
+    display.setFont(u8g2_font_4x6_tr); // Choose a suitable font
     display.setCursor(setCursorFirst, setCursorSecond);
     display.print("Staring!!!"); // Write a string to the display
     display.sendBuffer(); // Transfer internal memory to the display
@@ -196,13 +203,15 @@ struct Robot {
   }
 
   void drawFloatNoClear(float num, int x, int y) {
-    String message = String(num, 1);
-    drawStringNoClear(message.c_str(), x, y);
+    char buf[16];
+    dtostrf(num, 0, 1, buf);
+    drawStringNoClear(buf, x, y);
   }
 
   void drawFloat(float num, const int x = setCursorFirst, const int y = setCursorSecond) {
-    String message = String(num, 1);
-    drawString(message.c_str(), x, y);
+    char buf[16];
+    dtostrf(num, 0, 1, buf);
+    drawString(buf, x, y);
   }
 
   void drawString(const char* message, const int x = setCursorFirst, const int y = setCursorSecond) {
@@ -304,29 +313,92 @@ struct Robot {
     }
   }
 
+  // Basically just a DFS (note, must start with back against wall)
+  void exploreMap() {
+    int cmdNumber = 0;
+    char cmds[MAX_MOVEMENTS] = {};
+    bool isBacktracking = false;
+    
+    // Needs to start with butt against wall
+    map.setWall(robotX,robotY,(robotOrientation + 2) % 4);
+    
+    while (!(cmdNumber == 0 && noAdjShouldVisit())) {
+      visitCurrentCell();
+      // if "not backtracking" and shouldn't -> (prioritise left -> right-> forward) go there and save inverse instruction to cmds[cmdNumber] and cmdNumber++
+      // If "not backtracking" and should (ie dead end) -> turn around
+      // if "backtracking" and should -> do end command, subtract cmdNumber 
+      // if "backtracking" and shouldn't -> (do one more cmd (only if its a turn), turn around) = turn opposite way to cmd, now not backtracking 
+    }
+
+    executeMovement('u');
+  }
+
+  void scanWalls() {
+    if (front_lidar.get_dist() < IS_WALL_DIST) {
+      map.setWall(robotX,robotY,robotOrientation);
+    }
+    if (left_lidar.get_dist() < IS_WALL_DIST) {
+      map.setWall(robotX, robotY, (robotOrientation + 3) % 4);
+    }
+    if (right_lidar.get_dist() < IS_WALL_DIST) {
+      map.setWall(robotX, robotY, (robotOrientation + 1) % 4); 
+    }
+  }
+
+  void visitCurrentCell() {
+    scanWalls();
+    map.visitCell(robotX, robotY);
+  }
+
+  bool noAdjShouldVisit() {
+    return !shouldTravelTo(-1) && !shouldTravelTo(0) && !shouldTravelTo(1);
+  }
+
+  bool shouldTravelTo(int direction) {
+    int absoluteDirection = (robotOrientation + (direction + 4)) % 4;
+    return !map.cellVisited(robotX, robotY, absoluteDirection) && !map.wallExists(robotX, robotY, absoluteDirection);
+  }
+
   void moveForwardOneCell() {
     moveForwardDistance(180.0, general_speed);
   }
 
-  void turnLeft90() {
-    turnToAngle(imu.normalizeAngle(imu.getDirection() + 90), general_speed);
-    delay(200);
-  }
-
-  void turnRight90() {
-    turnToAngle(imu.normalizeAngle(imu.getDirection() - 90), general_speed);
-    delay(200);
+  // Right = positive angle here
+  void turnToRelativeAngle(float angle) {
+	  turnToAngle(imu.normalizeAngle(imu.getDirection() - angle), general_speed);
   }
 
   void executeMovementString(char* cmdString) {
     for (int i = 0; cmdString[i] != '\0'; ++i) {
-      switch (cmdString[i]) {
-        case 'f': moveForwardOneCell(); break;
-        case 'l': turnLeft90(); break;
-        case 'r': turnRight90(); break;
-      }
-      delay(500);
+      executeMovement(cmdString[i]);
     }
+  }
+
+  void executeMovement(char movement) {
+    switch (movement) {
+      case 'f': 
+        moveForwardOneCell();
+        switch (robotOrientation) {
+          case UP: robotY -= 1; break;
+          case RIGHT: robotX += 1; break;
+          case DOWN: robotY += 1; break;
+          case LEFT: robotX -= 1; break;
+        }
+        break;
+      case 'l': 
+        turnToRelativeAngle(-90); 
+        robotOrientation = (robotOrientation + 3) % 4;
+        break;
+      case 'r': 
+        turnToRelativeAngle(90); 
+        robotOrientation = (robotOrientation + 1) % 4;
+        break;
+      case 'u': // U-turn
+        turnToRelativeAngle(180);
+        robotOrientation = (robotOrientation + 2) % 4;		
+        break;
+    }
+    delay(50);
   }
 };
 
