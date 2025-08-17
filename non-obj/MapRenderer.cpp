@@ -76,7 +76,7 @@ void MapRenderer::drawWalls() const {
             if (horizontalWalls[ny][cx]) {
                 const int x0 = nodeX(cx);
                 const int y0 = nodeY(ny);
-                u8g2.drawHLine(x0, y0, CELLS);
+                u8g2.drawHLine(x0, y0);
             }
         }
     }
@@ -86,7 +86,7 @@ void MapRenderer::drawWalls() const {
             if (verticalWalls[cy][nx]) {
                 const int x0 = nodeX(nx);
                 const int y0 = nodeY(cy);
-                u8g2.drawVLine(x0, y0, CELLS);
+                u8g2.drawVLine(x0, y0);
             }
         }
     }
