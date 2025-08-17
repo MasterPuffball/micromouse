@@ -33,4 +33,20 @@
 #define MM_PER_TICK (WHEEL_CIRCUM / TICKS_PER_REV)
 #define ODOM_POLL_TIME 1 //In Milliseconds
 
+// Map Constants
+#define MAX_MOVEMENTS 100
+#define MAP_HEIGHT 10
+#define MAP_LENGTH 10
+#define MAX_NODES (MAP_WIDTH*MAP_LENGTH)
+#define UP 0
+#define RIGHT 1
+#define DOWN 2
+#define LEFT 3
+#define IS_WALL_DIST 150
+
+// Robot starting orientation
+#define STARTING_ORIENTATION (UP)
+#define STARTING_X 0
+#define STARTING_Y 0
+
 #endif  // CONSTANTS_H

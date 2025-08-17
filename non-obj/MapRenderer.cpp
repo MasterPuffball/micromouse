@@ -112,8 +112,8 @@ float MapRenderer::getCompletionPercentage() {
 void MapRenderer::drawCompletion() {
     u8g2.clearBuffer();
     drawMap();
-    u8g2.setFont(u8g2_font_6x10_tr);
     u8g2.setCursor(75, 60);
+    u8g2.setFont(u8g2_font_4x6_tr);
     u8g2.print(getCompletionPercentage(), 2);
     u8g2.print("%");
 }
