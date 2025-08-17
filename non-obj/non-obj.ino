@@ -23,26 +23,26 @@ struct Robot {
   U8G2_SSD1306_128X64_NONAME_1_HW_I2C display{U8G2_R0, U8X8_PIN_NONE};
   MapRenderer mapRenderer{display};
   // Controllers
-  static constexpr float KP1 = 1.1;
+  static constexpr float KP1 = 4;
   static constexpr float KI1 = 0.2;
   static constexpr float KD1 = 0.1;
   mtrn3100::PIDController left_controller{KP1, KI1, KD1};
 
-  static constexpr float KP2 = 1.1;
+  static constexpr float KP2 = 4;
   static constexpr float KI2 = 0.2;
   static constexpr float KD2 = 0.1;
   mtrn3100::PIDController right_controller{KP2, KI2, KD2};
 
   // Encoder direction controller
   static constexpr float KP3 = 1.5;
-  static constexpr float KI3 = 0.1;
+  static constexpr float KI3 = 0.2;
   static constexpr float KD3 = 0.1;
   mtrn3100::PIDController diff_controller{KP3, KI3, KD3};
 
   // True direction controller
-  static constexpr float KP4 = 2.3;
-  static constexpr float KI4 = 0.8;
-  static constexpr float KD4 = 0.08;
+  static constexpr float KP4 = 6;
+  static constexpr float KI4 = 0.0395;
+  static constexpr float KD4 = 0.25; 
   mtrn3100::PIDController direction_controller{KP4, KI4, KD4, true};
 
   // Distance Controller
@@ -119,6 +119,7 @@ struct Robot {
   
   void loop() {
     // moveForwardOneCell();
+    // moveForwardDistance(180.0, general_speed);
     
     // display.firstPage();
     // do {
@@ -128,7 +129,14 @@ struct Robot {
 
     // turnToAngle(0,0.5);
     // maintainDistance(100, 0.5); 
-    //turnLeft90();
+    // turnLeft90();
+    // turnLeft90();
+    // turnLeft90();
+    // turnLeft90();
+    turnRight90();
+    turnRight90();
+    turnRight90();
+    turnRight90();
     // turnToAngle(90,0.4);
     // maintainDistance(100, 0.5);
     // direction_controller.tune(KP4, KI4, i);
@@ -256,10 +264,10 @@ struct Robot {
     long startTime = millis();
 
     while (true) {
-      drawTelemetry(direction_controller);
+      // drawTelemetry(direction_controller);
       
       float direction = imu.getDirection();
-      direction = odom.getTheta();
+      // direction = odom.getTheta();
       float directionalAdjustment = direction_controller.compute(direction);
       // Serial.println(direction);
       // drawFloat(direction);
@@ -310,12 +318,12 @@ struct Robot {
 
   void turnLeft90() {
     turnToAngle(imu.normalizeAngle(imu.getDirection() + 90), general_speed);
-    delay(200);
+    delay(500);
   }
 
   void turnRight90() {
     turnToAngle(imu.normalizeAngle(imu.getDirection() - 90), general_speed);
-    delay(200);
+    delay(500);
   }
 
   void executeMovementString(char* cmdString) {

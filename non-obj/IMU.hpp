@@ -55,6 +55,7 @@ public:
       return direction/IMU_AVERAGE_AMOUNT;
     }
 
+    // keeps the angle between 0 and 360 (fmod(370,360) -> 10 while fmod(-10, 360) -> -10)
     float normalizeAngle(float angle) {
       float normalized = fmod(angle, 360.0f);
 
