@@ -1,5 +1,7 @@
 #pragma once
 #include <U8g2lib.h>
+#include "Constants.h"
+#include "Map.hpp"
 
 class MapRenderer {
 public:

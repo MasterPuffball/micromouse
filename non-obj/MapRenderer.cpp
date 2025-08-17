@@ -1,10 +1,7 @@
 #include "MapRenderer.hpp"
 
-MapRenderer::MapRenderer(U8G2 &display) : u8g2(display) {
-    initBorderWalls();
-    markVisited(robotX, robotY);
-}
-
+namespace mtrn3100 {
+MapRenderer::MapRenderer(U8G2 &display) : u8g2(display) {}
 
 //void MapRenderer::setRobotPosition(uint8_t x, uint8_t y, uint8_t dir) {
 //    robotX = x;
@@ -12,18 +9,18 @@ MapRenderer::MapRenderer(U8G2 &display) : u8g2(display) {
 //    robotDir = dir;
 //}
 
-void MapRenderer::initBorderWalls() {
-    // top & bottom borders
-    for (uint8_t x = 0; x < CELLS; ++x) {
-        horizontalWalls[0][x]       = true;        // north of row 0
-        horizontalWalls[CELLS][x]   = true;        // south of last row
-    }
-    // left & right borders
-    for (uint8_t y = 0; y < CELLS; ++y) {
-        verticalWalls[y][0]         = true;        // west of col 0
-        verticalWalls[y][CELLS]     = true;        // east of last col
-    }
-}
+//void MapRenderer::initBorderWalls() {
+//    // top & bottom borders
+//    for (uint8_t x = 0; x < CELLS; ++x) {
+//        horizontalWalls[0][x]       = true;
+//        horizontalWalls[CELLS][x]   = true;
+//    }
+//    // left & right borders
+//    for (uint8_t y = 0; y < CELLS; ++y) {
+//        verticalWalls[y][0]         = true;
+//        verticalWalls[y][CELLS]     = true;
+//    }
+//}
 
 void MapRenderer::setRobotPosition(uint8_t cellX, uint8_t cellY, uint8_t dir) {
     if (cellX >= CELLS) cellX = CELLS - 1;
@@ -31,7 +28,6 @@ void MapRenderer::setRobotPosition(uint8_t cellX, uint8_t cellY, uint8_t dir) {
     robotX = cellX;
     robotY = cellY;
     robotDir = (dir & 0x03);
-    markVisited(robotX, robotY);
 }
 
 void MapRenderer::updateWall(bool horizontal, uint8_t index, uint8_t pos, bool isWall) {
@@ -50,15 +46,15 @@ void MapRenderer::updateWall(bool horizontal, uint8_t index, uint8_t pos, bool i
 
 
 void MapRenderer::drawDot(uint8_t x, uint8_t y) {
-    u8g2.drawDisc(startX + x * dotSpacing, startY + y * dotSpacing, 0);
+    u8g2.drawDisc(startX + x * CELL_SIZE, startY + y * CELL_SIZE, 0);
 }
 
 void MapRenderer::drawHLine(uint8_t x, uint8_t y) {
-    u8g2.drawLine(x, y, x + dotSpacing, y);
+    u8g2.drawLine(x, y, x + CELL_SIZE, y);
 }
 
 void MapRenderer::drawVLine(uint8_t x, uint8_t y) {
-    u8g2.drawLine(x, y, x, y + dotSpacing);
+    u8g2.drawLine(x, y, x, y + CELL_SIZE);
 }
 
 void MapRenderer::drawGrid() {
@@ -70,48 +66,54 @@ void MapRenderer::drawGrid() {
 }
 
 void MapRenderer::drawWalls() const {
-    // Horizontal edges: iterate node rows (ny) and cell-x (cx)
-    for (uint8_t ny = 0; ny < NODES; ++ny) {
-        for (uint8_t cx = 0; cx < CELLS; ++cx) {
-            if (horizontalWalls[ny][cx]) {
-                const int x0 = nodeX(cx);
-                const int y0 = nodeY(ny);
-                u8g2.drawHLine(x0, y0);
-            }
-        }
+  for (uint8_t y = 0; y < MAP_HEIGHT; ++y) {
+    for (uint8_t x = 0; x < MAP_LENGTH; ++x) {
+      // UP (north) edge of (x,y) → H line at node(x,y)
+      if (map.wallExists(x, y, UP)) {
+        const int x0 = nodeX(x);
+        const int y0 = nodeY(y);
+        drawSolidHLine(x0, y0);
+      }
+      // LEFT (west) edge of (x,y) → V line at node(x,y)
+      if (map.wallExists(x, y, LEFT)) {
+        const int x0 = nodeX(x);
+        const int y0 = nodeY(y);
+        drawSolidVLine(x0, y0);
+      }
+      // RIGHT edge for last column (x == MAP_LENGTH-1) → V line at node(x+1,y)
+      if (x == MAP_LENGTH - 1 && map.wallExists(x, y, RIGHT)) {
+        const int x0 = nodeX(x + 1);
+        const int y0 = nodeY(y);
+        drawSolidVLine(x0, y0);
+      }
+      // DOWN edge for last row (y == MAP_HEIGHT-1) → H line at node(x,y+1)
+      if (y == MAP_HEIGHT - 1 && map.wallExists(x, y, DOWN)) {
+        const int x0 = nodeX(x);
+        const int y0 = nodeY(y + 1);
+        drawSolidHLine(x0, y0);
+      }
     }
-    // Vertical edges: iterate cell-y (cy) and node cols (nx)
-    for (uint8_t cy = 0; cy < CELLS; ++cy) {
-        for (uint8_t nx = 0; nx < NODES; ++nx) {
-            if (verticalWalls[cy][nx]) {
-                const int x0 = nodeX(nx);
-                const int y0 = nodeY(cy);
-                u8g2.drawVLine(x0, y0);
-            }
-        }
-    }
+  }
 }
 
-void MapRenderer::markVisited(uint8_t x, uint8_t y) {
-    if (x >= CELLS || y >= CELLS) return;
-    if (!visited[y][x]) {
-        visited[y][x] = true;
-        if (visited_cells_count < CELLS * CELLS) ++visited_cells_count;
-    }
-}
+//void MapRenderer::markVisited(uint8_t x, uint8_t y) {
+//    if (x >= CELLS || y >= CELLS) return;
+//    if (!visited[y][x]) {
+//        visited[y][x] = true;
+//        if (visited_cells_count < CELLS * CELLS) ++visited_cells_count;
+//    }
+//}
 
-bool MapRenderer::isVisited(uint8_t x, uint8_t y) const {
-    if (x >= CELLS || y >= CELLS) return true;
-    return visited[y][x];
-}
+//bool MapRenderer::isVisited(uint8_t x, uint8_t y) const {
+//    if (x >= CELLS || y >= CELLS) return true;
+//   return visited[y][x];
+//}
 
 float MapRenderer::getCompletionPercentage() {
     return ((visited_cells_count) / (CELLS * CELLS)) * 100.0f;
 }
 
 void MapRenderer::drawCompletion() {
-    u8g2.clearBuffer();
-    drawMap();
     u8g2.setCursor(75, 60);
     u8g2.setFont(u8g2_font_4x6_tr);
     u8g2.print(getCompletionPercentage(), 2);
@@ -119,6 +121,10 @@ void MapRenderer::drawCompletion() {
 }
 
 void MapRenderer::drawMap() {
+    u8g2.clearBuffer();
     drawGrid();
-    //drawWalls();
+    drawWalls();
+	drawCompletion();
+}
+
 }
