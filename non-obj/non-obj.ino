@@ -318,16 +318,64 @@ struct Robot {
     int cmdNumber = 0;
     char cmds[MAX_MOVEMENTS] = {};
     bool isBacktracking = false;
+    bool adjToVisit = false;
     
     // Needs to start with butt against wall
     map.setWall(robotX,robotY,(robotOrientation + 2) % 4);
     
-    while (!(cmdNumber == 0 && noAdjShouldVisit())) {
+    while (!(cmdNumber == 0 && !adjToVisit)) {
       visitCurrentCell();
-      // if "not backtracking" and shouldn't -> (prioritise left -> right-> forward) go there and save inverse instruction to cmds[cmdNumber] and cmdNumber++
-      // If "not backtracking" and should (ie dead end) -> turn around
-      // if "backtracking" and should -> do end command, subtract cmdNumber 
-      // if "backtracking" and shouldn't -> (do one more cmd (only if its a turn), turn around) = turn opposite way to cmd, now not backtracking 
+      mapRenderer.drawMap();
+
+      bool visitLeft = shouldTravelTo(-1);
+      bool visitForward = shouldTravelTo(0);
+      bool visitRight = shouldTravelTo(1);
+      adjToVisit = visitLeft || visitForward || visitRight;
+
+      // if not backtracking and shouldn't -> (prioritise left -> right-> forward) go there and save inverse instruction to cmds[cmdNumber] and cmdNumber++ 
+      if (!isBacktracking) {
+        if (adjToVisit) {
+          if (visitLeft) {
+            cmds[cmdNumber] = 'r';
+            executeMovement('l');
+          }
+          else if (visitForward) {
+            cmds[cmdNumber] = 'f';
+            executeMovement('f');
+          }
+          else if (visitRight) {
+            cmds[cmdNumber] = 'l';
+            executeMovement('r');
+          }
+          cmdNumber++;
+        }
+        // If "not backtracking" and should (ie dead end) -> turn around, set to is backtracking
+        else {
+          executeMovement('u');
+          isBacktracking = true;
+        }
+      }
+      else {
+        // if "backtracking" and shouldn't -> (do one more cmd (only if its a turn), turn around) = turn opposite way to cmd, now not backtracking 
+        if (adjToVisit) {
+          isBacktracking = false;
+          cmdNumber--;
+          if (cmds[cmdNumber] == 'l') {
+            executeMovement('r');
+          }
+          else if (cmds[cmdNumber] == 'r') {
+            executeMovement('l');
+          }
+          else {
+            executeMovement('u');
+          }
+        }
+        // if "backtracking" and should -> do latest command, subtract cmdNumber 
+        else {
+          cmdNumber--;
+          executeMovement(cmds[cmdNumber]);
+        }
+      }
     }
 
     executeMovement('u');
@@ -348,10 +396,6 @@ struct Robot {
   void visitCurrentCell() {
     scanWalls();
     map.visitCell(robotX, robotY);
-  }
-
-  bool noAdjShouldVisit() {
-    return !shouldTravelTo(-1) && !shouldTravelTo(0) && !shouldTravelTo(1);
   }
 
   bool shouldTravelTo(int direction) {
