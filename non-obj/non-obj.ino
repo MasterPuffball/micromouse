@@ -1,6 +1,7 @@
 #include <SPI.h>
 #include <Wire.h>
 #include <U8g2lib.h>
+#include <Adafruit_GFX.h>
 
 #include "Encoder.hpp"
 #include "Motor.hpp"
@@ -11,7 +12,6 @@
 #include "Map.hpp"
 #include "EncoderOdometry.hpp"
 #include "Constants.h"
-
 #include "MapRenderer.hpp"
 
 int curTime = 0;
@@ -21,15 +21,15 @@ float general_speed = 0.45;
 
 struct Robot {
   U8G2_SSD1306_128X64_NONAME_1_HW_I2C display{U8G2_R0, U8X8_PIN_NONE};
-  mtrn3100::Map map{};
-  MapRenderer mapRenderer{display};
+  // mtrn3100::Map map{};
+  // MapRenderer mapRenderer{display};
   // Controllers
-  static constexpr float KP1 = 1.1;
+  static constexpr float KP1 = 2.3;
   static constexpr float KI1 = 0.2;
   static constexpr float KD1 = 0.1;
   mtrn3100::PIDController left_controller{KP1, KI1, KD1};
 
-  static constexpr float KP2 = 1.1;
+  static constexpr float KP2 = 2.3;
   static constexpr float KI2 = 0.2;
   static constexpr float KD2 = 0.1;
   mtrn3100::PIDController right_controller{KP2, KI2, KD2};
@@ -97,16 +97,16 @@ struct Robot {
   }
 
   void begin() {
-    Serial.println(F("Beginning Robot"));
+    Serial.println("Beginning Robot");
 
     initScreen();
-    Serial.println(F("Display Setup Complete"));
+    Serial.println("Display Setup Complete");
     drawString("Display Setup Complete");
 
     delay(50);
   
     imu.begin();
-    Serial.println(F("IMU Setup Complete"));
+    Serial.println("IMU Setup Complete");
     drawString("IMU Setup Complete");
 
     odom.begin();
@@ -114,11 +114,11 @@ struct Robot {
     delay(50);
 
     initWheels();
-    Serial.println(F("Wheel Setup Complete"));
+    Serial.println("Wheel Setup Complete");
     drawString("Wheel Setup Complete");
         
     delay(50);
-    Serial.println(F("Finished Setup"));
+    Serial.println("Finished Setup");
     drawString("Finished Setup");
   }
   
@@ -129,26 +129,28 @@ struct Robot {
     // do {
     //   mapRenderer.drawCompletion();
     // } while (display.nextPage());
-    exploreMap();
-    mapRenderer.drawMap();
-	  while (true) {}
+
+    // exploreMap();
+    // mapRenderer.drawMap();
+	  // while (true) {}
 
     // turnToAngle(0,0.5);
     // maintainDistance(100, 0.5); 
-    //turnLeft90();
+    // turnLeft90(); 
+    executeMovementString("frflflfrf");
+    // executeMovement('l');
     // turnToAngle(90,0.4);
     // maintainDistance(100, 0.5);
     // direction_controller.tune(KP4, KI4, i);
-    //delay(100);
+    // Serial.println(imu.getDirection());
+    delay(100);
     // getLeftDist();
     // getFrontDist();
     // getRightDist();
     // turnRight90();
-    // drawTelemetry(direction_controller);
     // testPrintLines();
-    // Serial.println(imu.getDirection());
-
-
+    
+    // drawTelemetry(direction_controller);
     // executeMovementString("lfrfflfr");
     // executeMovementString("ffllfrfr");
     // turnToAngle(-90, 0.3);
@@ -268,7 +270,6 @@ struct Robot {
       drawTelemetry(direction_controller);
       
       float direction = imu.getDirection();
-      direction = odom.getTheta();
       float directionalAdjustment = direction_controller.compute(direction);
       // Serial.println(direction);
       // drawFloat(direction);
@@ -313,95 +314,95 @@ struct Robot {
     }
   }
 
-  // Basically just a DFS (note, must start with back against wall)
-  void exploreMap() {
-    int cmdNumber = 0;
-    char cmds[MAX_MOVEMENTS] = {};
-    bool isBacktracking = false;
-    bool adjToVisit = false;
+  // // Basically just a DFS (note, must start with back against wall)
+  // void exploreMap() {
+  //   int cmdNumber = 0;
+  //   char cmds[MAX_MOVEMENTS] = {};
+  //   bool isBacktracking = false;
+  //   bool adjToVisit = false;
     
-    // Needs to start with butt against wall
-    map.setWall(robotX,robotY,(robotOrientation + 2) % 4);
+  //   // Needs to start with butt against wall
+  //   map.setWall(robotX,robotY,(robotOrientation + 2) % 4);
     
-    while (!(cmdNumber == 0 && !adjToVisit)) {
-      visitCurrentCell();
-      mapRenderer.drawMap();
+  //   while (!(cmdNumber == 0 && !adjToVisit)) {
+  //     visitCurrentCell();
+  //     // mapRenderer.drawMap();
 
-      bool visitLeft = shouldTravelTo(-1);
-      bool visitForward = shouldTravelTo(0);
-      bool visitRight = shouldTravelTo(1);
-      adjToVisit = visitLeft || visitForward || visitRight;
+  //     bool visitLeft = shouldTravelTo(-1);
+  //     bool visitForward = shouldTravelTo(0);
+  //     bool visitRight = shouldTravelTo(1);
+  //     adjToVisit = visitLeft || visitForward || visitRight;
 
-      // if not backtracking and shouldn't -> (prioritise left -> right-> forward) go there and save inverse instruction to cmds[cmdNumber] and cmdNumber++ 
-      if (!isBacktracking) {
-        if (adjToVisit) {
-          if (visitLeft) {
-            cmds[cmdNumber] = 'r';
-            executeMovement('l');
-          }
-          else if (visitForward) {
-            cmds[cmdNumber] = 'f';
-            executeMovement('f');
-          }
-          else if (visitRight) {
-            cmds[cmdNumber] = 'l';
-            executeMovement('r');
-          }
-          cmdNumber++;
-        }
-        // If "not backtracking" and should (ie dead end) -> turn around, set to is backtracking
-        else {
-          executeMovement('u');
-          isBacktracking = true;
-        }
-      }
-      else {
-        // if "backtracking" and shouldn't -> (do one more cmd (only if its a turn), turn around) = turn opposite way to cmd, now not backtracking 
-        if (adjToVisit) {
-          isBacktracking = false;
-          cmdNumber--;
-          if (cmds[cmdNumber] == 'l') {
-            executeMovement('r');
-          }
-          else if (cmds[cmdNumber] == 'r') {
-            executeMovement('l');
-          }
-          else {
-            executeMovement('u');
-          }
-        }
-        // if "backtracking" and should -> do latest command, subtract cmdNumber 
-        else {
-          cmdNumber--;
-          executeMovement(cmds[cmdNumber]);
-        }
-      }
-    }
+  //     // if not backtracking and shouldn't -> (prioritise left -> right-> forward) go there and save inverse instruction to cmds[cmdNumber] and cmdNumber++ 
+  //     if (!isBacktracking) {
+  //       if (adjToVisit) {
+  //         if (visitLeft) {
+  //           cmds[cmdNumber] = 'r';
+  //           executeMovement('l');
+  //         }
+  //         else if (visitForward) {
+  //           cmds[cmdNumber] = 'f';
+  //           executeMovement('f');
+  //         }
+  //         else if (visitRight) {
+  //           cmds[cmdNumber] = 'l';
+  //           executeMovement('r');
+  //         }
+  //         cmdNumber++;
+  //       }
+  //       // If "not backtracking" and should (ie dead end) -> turn around, set to is backtracking
+  //       else {
+  //         executeMovement('u');
+  //         isBacktracking = true;
+  //       }
+  //     }
+  //     else {
+  //       // if "backtracking" and shouldn't -> (do one more cmd (only if its a turn), turn around) = turn opposite way to cmd, now not backtracking 
+  //       if (adjToVisit) {
+  //         isBacktracking = false;
+  //         cmdNumber--;
+  //         if (cmds[cmdNumber] == 'l') {
+  //           executeMovement('r');
+  //         }
+  //         else if (cmds[cmdNumber] == 'r') {
+  //           executeMovement('l');
+  //         }
+  //         else {
+  //           executeMovement('u');
+  //         }
+  //       }
+  //       // if "backtracking" and should -> do latest command, subtract cmdNumber 
+  //       else {
+  //         cmdNumber--;
+  //         executeMovement(cmds[cmdNumber]);
+  //       }
+  //     }
+  //   }
 
-    executeMovement('u');
-  }
+  //   executeMovement('u');
+  // }
 
-  void scanWalls() {
-    if (front_lidar.get_dist() < IS_WALL_DIST) {
-      map.setWall(robotX,robotY,robotOrientation);
-    }
-    if (left_lidar.get_dist() < IS_WALL_DIST) {
-      map.setWall(robotX, robotY, (robotOrientation + 3) % 4);
-    }
-    if (right_lidar.get_dist() < IS_WALL_DIST) {
-      map.setWall(robotX, robotY, (robotOrientation + 1) % 4); 
-    }
-  }
+  // void scanWalls() {
+  //   if (front_lidar.get_dist() < IS_WALL_DIST) {
+  //     map.setWall(robotX,robotY,robotOrientation);
+  //   }
+  //   if (left_lidar.get_dist() < IS_WALL_DIST) {
+  //     map.setWall(robotX, robotY, (robotOrientation + 3) % 4);
+  //   }
+  //   if (right_lidar.get_dist() < IS_WALL_DIST) {
+  //     map.setWall(robotX, robotY, (robotOrientation + 1) % 4); 
+  //   }
+  // }
 
-  void visitCurrentCell() {
-    scanWalls();
-    map.visitCell(robotX, robotY);
-  }
+  // void visitCurrentCell() {
+  //   scanWalls();
+  //   map.visitCell(robotX, robotY);
+  // }
 
-  bool shouldTravelTo(int direction) {
-    int absoluteDirection = (robotOrientation + (direction + 4)) % 4;
-    return !map.cellVisited(robotX, robotY, absoluteDirection) && !map.wallExists(robotX, robotY, absoluteDirection);
-  }
+  // bool shouldTravelTo(int direction) {
+  //   int absoluteDirection = (robotOrientation + (direction + 4)) % 4;
+  //   return !map.cellVisited(robotX, robotY, absoluteDirection) && !map.wallExists(robotX, robotY, absoluteDirection);
+  // }
 
   void moveForwardOneCell() {
     moveForwardDistance(180.0, general_speed);
@@ -442,6 +443,9 @@ struct Robot {
         robotOrientation = (robotOrientation + 2) % 4;		
         break;
     }
+    
+    left_wheel.setSpeed(0);
+    right_wheel.setSpeed(0);x
     delay(50);
   }
 };
@@ -453,10 +457,14 @@ void setup() {
   delay(50);
   Robot robot{};
 
+  constexpr auto a{sizeof(Robot)};
+  constexpr auto b{sizeof(mtrn3100::Map)};
+  constexpr auto c{sizeof(mtrn3100::PIDController)};
+
   robot.begin();
   
   delay(100);
-
+  
   while (true) {
     robot.loop();
   }

@@ -99,15 +99,15 @@ class MPU6050{
 
   private:
     TwoWire *wire;
-	uint8_t address = MPU6050_ADDR; // 0x68 or 0x69
-	float gyro_lsb_to_degsec, acc_lsb_to_g;
-    float gyroXoffset, gyroYoffset, gyroZoffset;
-	float accXoffset, accYoffset, accZoffset;
-    float temp, accX, accY, accZ, gyroX, gyroY, gyroZ;
-    float angleAccX, angleAccY;
-    float angleX = 0, angleY = 0, angleZ = 0;
-    long preInterval = 0;
-    float filterGyroCoef; // complementary filter coefficient to balance gyro vs accelero data to get angle
+	  uint8_t address = MPU6050_ADDR; // 0x68 or 0x69
+	  float gyro_lsb_to_degsec{}, acc_lsb_to_g{};
+    float gyroXoffset{}, gyroYoffset{}, gyroZoffset{};
+	  float accXoffset{}, accYoffset{}, accZoffset{};
+    float temp{}, accX{}, accY{}, accZ{}, gyroX{}, gyroY{}, gyroZ{};
+    float angleAccX{}, angleAccY{};
+    float angleX{}, angleY{}, angleZ{};
+    long preInterval{};
+    float filterGyroCoef{}; // complementary filter coefficient to balance gyro vs accelero data to get angle
 };
 
 #endif
