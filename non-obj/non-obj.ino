@@ -138,7 +138,7 @@ struct Robot {
     // turnToAngle(0,0.5);
     // maintainDistance(100, 0.5); 
     // turnLeft90(); 
-    executeMovementString("frflflfrf");
+    // executeMovementString("frflflfrf");
     executeMovementString("ffffff");
     // executeMovement('l');
     // turnToAngle(90,0.4);
@@ -439,8 +439,8 @@ struct Robot {
       Serial.println(distanceAdjustment);
 
       //  + (directionalAdjustment * DIRECTION_BIAS_STRENGTH)
-      float leftMotorSignal = (constrain(-sign * distanceAdjustment, -100, 100)) * 0.1;
-      float rightMotorSignal = (constrain(sign * distanceAdjustment, -100, 100)) * 0.1;
+      float leftMotorSignal = (constrain(-sign * distanceAdjustment, -100, 100)) * 0.3;
+      float rightMotorSignal = (constrain(sign * distanceAdjustment, -100, 100)) * 0.3;
 
       left_wheel.setSpeed(leftMotorSignal);
       right_wheel.setSpeed(rightMotorSignal);
@@ -501,6 +501,8 @@ struct Robot {
     } else {
       return;
     }
+
+    delay(500);
 
     // Now facing the wall it needs to center based off
     // Fix the angle such that it is perpendicular to the wall
