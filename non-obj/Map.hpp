@@ -47,8 +47,8 @@ class Map {
 public:
   Map() {
     // Initialise has path to true everywhere (assume there are no walls in the maze)
-    for (int i = 0; i < MAP_LENGTH - 1; i++) {
-      for (int j = 0; j < MAP_HEIGHT - 1; j++) {
+    for (int i = 0; i < MAP_LENGTH; i++) {
+      for (int j = 0; j < MAP_HEIGHT; j++) {
         hasPathRight.set(i, j, true);
         hasPathDown.set(i,j, true);
       }
@@ -69,11 +69,11 @@ public:
 		}
 		if(direction == RIGHT) {
 			if (x >= MAP_LENGTH - 1) return;
-      hasPathRight.set(x+1, y, false);
+      hasPathRight.set(x, y, false);
 		}
 		if(direction == DOWN) {
 			if (y >= MAP_HEIGHT - 1) return;
-      hasPathDown.set(x, y+1, false);
+      hasPathDown.set(x, y, false);
 		}
 		if (direction == LEFT) {
 			if (x <= 0) return;
@@ -88,11 +88,11 @@ public:
 		}
 		if(direction == RIGHT) {
 			if (x >= MAP_LENGTH - 1) return true;
-      return !hasPathRight.get(x+1, y);
+      return !hasPathRight.get(x, y);
 		}
 		if(direction == DOWN) {
 			if (y >= MAP_HEIGHT - 1) return true;
-      return !hasPathDown.get(x, y+1);
+      return !hasPathDown.get(x, y);
 		}
 		if (direction == LEFT) {
 			if (x <= 0) return true;

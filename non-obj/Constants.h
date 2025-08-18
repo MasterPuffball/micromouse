@@ -44,6 +44,13 @@
 #define LEFT 3
 #define IS_WALL_DIST 150
 
+// Map Draw Constants
+#define CURSOR_START_X 10
+#define CURSOR_START_Y 5
+#define CELL_SIZE (SCREEN_HEIGHT - (CURSOR_START_Y*2))/MAP_HEIGHT
+#define SCREEN_HEIGHT 64
+#define SCREEN_LENGTH 128
+
 // Compact Map Storage Constants
 #define NUM_MAP_BITS (MAP_HEIGHT*MAP_LENGTH)
 #define NUM_MAP_BYTES ((NUM_MAP_BITS + 7) / 8)
@@ -52,5 +59,8 @@
 #define STARTING_ORIENTATION (DOWN)
 #define STARTING_X 0
 #define STARTING_Y 0
+
+
+
 
 #endif  // CONSTANTS_H

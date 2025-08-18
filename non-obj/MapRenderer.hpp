@@ -3,43 +3,74 @@
 #include "Constants.h"
 #include "Map.hpp"
 
+namespace mtrn3100 {
 class MapRenderer {
 public:
-    MapRenderer(U8G2 &display, const Map &map) : u8g2(display), map(map) {}
+  MapRenderer(U8G2 &display, Map &map) : u8g2(display), map(map) {}
 
-    // --- Constants ---
-    static constexpr uint8_t CELLS = 9;           // 9x9 cells
-    static constexpr uint8_t NODES = CELLS + 1;   // 10x10 dots
-    static constexpr uint8_t CELL_SIZE = 72;
+  void drawMap() {
+    u8g2.clearBuffer();
 
-    void drawGrid();
-    void drawCompletion();
+    u8g2.firstPage();
+    do {
+      drawGrid();
+      drawWalls();
+      drawCompletion();
+    } while (u8g2.nextPage());
+  }
 
-    //void setRobotPosition(uint8_t x, uint8_t y, uint8_t dir);
-    //void updateWalls(bool wallFront, bool wallLeft, bool wallRight);
-    void drawMap();
+  void drawGrid() {
+    for (uint8_t x = 0; x < MAP_LENGTH + 1; x++) {
+      for (uint8_t y = 0; y < MAP_HEIGHT + 1; y++) {
+        u8g2.drawDisc(getXCoord(x), getYCoord(y), 0);
+      }
+    }
+  }
 
-    // Visited for % completion
-    float getCompletionPercentage();
+  int getXCoord(uint8_t node) {
+    return CURSOR_START_X + node * CELL_SIZE;
+  }
+
+  int getYCoord(uint8_t node) {
+    return CURSOR_START_Y + node * CELL_SIZE;
+  }
+
+  void drawWalls() const {
+    for (uint8_t x = 0; x < MAP_LENGTH; ++x) {
+      for (uint8_t y = 0; y < MAP_HEIGHT; ++y) {
+        // north
+        if (map.wallExists(x, y, UP)) {
+          u8g2.drawHLine(getXCoord(x), getYCoord(y), CELL_SIZE);
+        }
+        // west
+        if (map.wallExists(x, y, LEFT)) {
+          u8g2.drawVLine(getXCoord(x), getYCoord(y), CELL_SIZE);
+        }
+        // right
+        if (map.wallExists(x, y, RIGHT)) {
+          u8g2.drawVLine(getXCoord(x+1), getYCoord(y), CELL_SIZE);
+        }
+        // south
+        if (map.wallExists(x, y, DOWN)) {
+          u8g2.drawHLine(getXCoord(x), getYCoord(y+1), CELL_SIZE);
+        }
+      }
+    }
+  }
+
+  float getCompletionPercentage() {
+    return ((map.getNumVisited()) / (CELL_SIZE)) * 100.0f;
+  }
+
+  void drawCompletion() {
+    u8g2.setCursor(75, 60);
+    u8g2.setFont(u8g2_font_4x6_tr);
+    u8g2.print(getCompletionPercentage(), 2);
+    u8g2.print("%");
+  }
 
 private:
     U8G2 &u8g2;
-    static constexpr uint8_t dotSpacing = 6;
-    static constexpr uint8_t startX = 10;
-    static constexpr uint8_t startY = 5;
-    uint8_t visited_cells_count = 0;
-
-    //bool horizontalWalls[NODES][CELLS] = {{false}}; // [node-y][cell-x]  : top/bottom of cells
-    //bool verticalWalls  [CELLS][NODES] = {{false}}; // [cell-y][node-x]  : left/right of cells
-
-    //bool visited[NODES][NODES] = {{false}};
-
-    //uint8_t robotX = 0, robotY = 0, robotDir = 0;
-    // CellWall mazeWalls[NODES][NODES];
-    //void updateWall(uint8_t cx, uint8_t cy, char dir, bool isWall);
-    //void drawHLine(uint8_t x, uint8_t y);
-    //void drawVLine(uint8_t x, uint8_t y);
-
-    void drawDot(uint8_t x, uint8_t y);
-    void drawWalls();
+    mtrn3100::Map &map;
 };
+}
