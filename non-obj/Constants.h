@@ -49,7 +49,7 @@
 #define NUM_MAP_BYTES ((NUM_MAP_BITS + 7) / 8)
 
 // Robot starting orientation
-#define STARTING_ORIENTATION (UP)
+#define STARTING_ORIENTATION (DOWN)
 #define STARTING_X 0
 #define STARTING_Y 0
 
