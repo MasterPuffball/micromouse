@@ -2,6 +2,7 @@
 
 #include <VL6180X.h>
 #include <Wire.h>
+#include "Constants.h"
 
 namespace mtrn3100 {
 class Lidar {
@@ -19,6 +20,14 @@ public:
 
     int get_dist() {
         return sensor.readRangeSingleMillimeters();
+    }
+
+    bool wall_in_range() {
+        if (get_dist() <= MAX_LIDAR_DIST) {
+            return true;
+        }
+
+        return false;
     }
 
 private:

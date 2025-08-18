@@ -24,6 +24,15 @@
 // IMU
 #define IMU_AVERAGE_AMOUNT 5
 
+// Lidar
+#define MAX_LIDAR_DIST 200
+
+// Resetting IMU distance
+// 180/2 - (75/2) = 52.5 + (37.5 - 20)
+#define IMU_COUNT_MAX 1
+#define WALL_CENTER_DIST 70
+#define MAINTAIN_DIST_MAX 3000
+
 // Encoder Odometry
 #define WHEEL_DIAMETER 32.4f //In millimeters
 #define WHEEL_RADIUS (WHEEL_DIAMETER / 2.0)

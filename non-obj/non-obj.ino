@@ -18,6 +18,7 @@ int curTime = 0;
 int setCursorFirst = 10;
 int setCursorSecond = 7;
 float general_speed = 0.45;
+int imuCounter = 0;
 
 struct Robot {
   U8G2_SSD1306_128X64_NONAME_1_HW_I2C display{U8G2_R0, U8X8_PIN_NONE};
@@ -138,6 +139,7 @@ struct Robot {
     // maintainDistance(100, 0.5); 
     // turnLeft90(); 
     executeMovementString("frflflfrf");
+    executeMovementString("ffffff");
     // executeMovement('l');
     // turnToAngle(90,0.4);
     // maintainDistance(100, 0.5);
@@ -302,7 +304,8 @@ struct Robot {
     // Set the wheels to go forward dist
     distance_controller.zeroAndSetTarget(0, distance);
 
-    while (true) {
+    long startTime = millis();
+    while ((millis() - startTime) < MAINTAIN_DIST_MAX) {
       float directionalAdjustment = direction_controller.compute(imu.getDirection());
       float distanceAdjustment = distance_controller.compute(front_lidar.get_dist());
 
@@ -419,7 +422,107 @@ struct Robot {
     }
   }
 
+  void alignToLowPoint(mtrn3100::Lidar lidar, int sign) {
+    // Set the wheels to go forward dist
+    distance_controller.zeroAndSetTarget(0, 0);
+
+    long startTime = millis();
+    float lastAdj = 1;
+    while ((millis() - startTime) < MAINTAIN_DIST_MAX) {
+      float distanceAdjustment = distance_controller.compute(sign * (front_lidar.get_dist() - WALL_CENTER_DIST));
+
+      if (distanceAdjustment * lastAdj <= 0) {
+        sign = !sign;
+      }
+      lastAdj = distanceAdjustment;
+
+      Serial.println(distanceAdjustment);
+
+      //  + (directionalAdjustment * DIRECTION_BIAS_STRENGTH)
+      float leftMotorSignal = (constrain(-sign * distanceAdjustment, -100, 100)) * 0.1;
+      float rightMotorSignal = (constrain(sign * distanceAdjustment, -100, 100)) * 0.1;
+
+      left_wheel.setSpeed(leftMotorSignal);
+      right_wheel.setSpeed(rightMotorSignal);
+    }
+  }
+
+  // Turns until it finds the shortest distance to the wall (this means it is perpendicular)
+  // void alignToLowPoint(mtrn3100::Lidar lidar) {
+  //   // turns until it finds the shortest distance
+
+  //   long startTime = millis();
+  //   bool turningLeft = true;
+  //   int closestDist = WALL_DIST;
+  //   int count = 0;
+  //   while ((startTime - millis()) < MAINTAIN_DIST_MAX) {
+  //     // check distance from left lidar sensor
+  //     int dist = lidar.get_dist()
+  //     if (dist <= closestDist) {
+  //       closestDist = dist;
+  //       continue;
+  //     }
+  //     // distance is too far, means we overshot
+  //     // we need to change direction and go opposite direction
+  //     turnLeft = !turnLeft;
+
+  //     // Check if its within a band, if so we turn around. 
+ 
+  //   }
+
+  //   left_wheel.setSpeed(0);
+  //   right_wheel.setSpeed(0);
+
+  //   // RESETS THE IMU BASED OFF THIS
+  //   // TODO HERE, snap it to the nearest 90 degrees
+  // }
+
+  // Used to reset the IMU based off a nearby wall
+  void incrementIMUCounterAndReset() {
+    imuCounter++;
+
+    if (imuCounter <= IMU_COUNT_MAX) {
+      return;
+    }
+
+    // Check for nearby walls, chooses one of them
+    // -> Check Left Wall
+    // -> Check Right Wall
+    // -> Continue onto next cell
+    // -> -> turn until it is perpendicular to it
+
+    // leftWall is used as the sign for our robot when we align point
+    int leftWall = -1;
+    if (left_lidar.wall_in_range()) {
+      leftWall = 1;
+      turnToRelativeAngle(-90); 
+    } else if (left_lidar.wall_in_range()) {
+      turnToRelativeAngle(90); 
+    } else {
+      return;
+    }
+
+    // Now facing the wall it needs to center based off
+    // Fix the angle such that it is perpendicular to the wall
+    alignToLowPoint(front_lidar, leftWall);
+
+    // Wall following to make the distance right
+    // Half the speed as its a minor distance
+    maintainDistance(WALL_CENTER_DIST, general_speed/2); 
+
+    // Turn back to the right direction if we turned
+    if (leftWall) {
+      turnToRelativeAngle(90);
+    } else {
+      turnToRelativeAngle(-90); 
+    }
+  }
+
   void executeMovement(char movement) {
+    // if (movement == 'l' || movement == 'r' || movement == 'u') {
+    incrementIMUCounterAndReset();
+    // }
+
     switch (movement) {
       case 'f': 
         moveForwardOneCell();
@@ -445,7 +548,7 @@ struct Robot {
     }
     
     left_wheel.setSpeed(0);
-    right_wheel.setSpeed(0);x
+    right_wheel.setSpeed(0);
     delay(50);
   }
 };
