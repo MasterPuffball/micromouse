@@ -130,14 +130,14 @@ struct Robot {
     //   mapRenderer.drawCompletion();
     // } while (display.nextPage());
 
-    // exploreMap();
+    exploreMap();
     // mapRenderer.drawMap();
 	  // while (true) {}
 
     // turnToAngle(0,0.5);
     // maintainDistance(100, 0.5); 
     // turnLeft90(); 
-    executeMovementString("frflflfrf");
+    // executeMovementString("frflflfrf");
     // executeMovement('l');
     // turnToAngle(90,0.4);
     // maintainDistance(100, 0.5);
@@ -183,9 +183,12 @@ struct Robot {
       int startY = 6;     // top margin
 
       drawTextValueLine("IMU:",        imu.getDirection(),         0, startY + lineHeight * 0);
-      drawTextValueLine("Error:",      controller.getError(),      0, startY + lineHeight * 1);
-      drawTextValueLine("Derivative:", controller.getDerivative(), 0, startY + lineHeight * 2);
-      drawTextValueLine("Integral:",   controller.getIntegral(),   0, startY + lineHeight * 3);
+      // drawTextValueLine("Error:",      controller.getError(),      0, startY + lineHeight * 1);
+      // drawTextValueLine("Derivative:", controller.getDerivative(), 0, startY + lineHeight * 2);
+      // drawTextValueLine("Integral:",   controller.getIntegral(),   0, startY + lineHeight * 3);
+      drawTextValueLine("Left:",      left_lidar.get_dist(),      0, startY + lineHeight * 1);
+      drawTextValueLine("Forward:", front_lidar.get_dist(), 0, startY + lineHeight * 2);
+      drawTextValueLine("Right:",   right_lidar.get_dist(),   0, startY + lineHeight * 3);
       drawTextValueLine("Target:",     controller.getTarget(),     0, startY + lineHeight * 4);
       drawTextValueLine("Zero:",       controller.getZero(),       0, startY + lineHeight * 5);
       drawTextValueLine("Odom θ:",     odom.getTheta(),            0, startY + lineHeight * 6);
@@ -235,7 +238,7 @@ struct Robot {
     long startTime = millis();
 
     while (true) {
-      drawTelemetry(left_controller);
+      // drawTelemetry(left_controller);
       float directionalAdjustment = direction_controller.compute(imu.getDirection());
       float leftSignal = left_controller.compute(left_wheel.getDistanceMoved());
       float rightSignal = right_controller.compute(right_wheel.getDistanceMoved());
@@ -267,7 +270,7 @@ struct Robot {
     long startTime = millis();
 
     while (true) {
-      drawTelemetry(direction_controller);
+      // drawTelemetry(direction_controller);
       
       float direction = imu.getDirection();
       float directionalAdjustment = direction_controller.compute(direction);
@@ -314,95 +317,128 @@ struct Robot {
     }
   }
 
-  // // Basically just a DFS (note, must start with back against wall)
-  // void exploreMap() {
-  //   int cmdNumber = 0;
-  //   char cmds[MAX_MOVEMENTS] = {};
-  //   bool isBacktracking = false;
-  //   bool adjToVisit = false;
+  // Basically just a DFS (note, must start with back against wall)
+  void exploreMap() {
+    int cmdNumber = 0;
+    char cmds[MAX_MOVEMENTS] = {};
+    bool isBacktracking = false;
+    bool adjToVisit = true;
     
-  //   // Needs to start with butt against wall
-  //   map.setWall(robotX,robotY,(robotOrientation + 2) % 4);
-    
-  //   while (!(cmdNumber == 0 && !adjToVisit)) {
-  //     visitCurrentCell();
-  //     // mapRenderer.drawMap();
+    // Needs to start with butt against wall
+    map.setWall(robotX,robotY,(robotOrientation + 2) % 4);
+    Serial.println("Start of loop");
+    while (!(cmdNumber == 0 && !adjToVisit)) {
+      visitCurrentCell();
+      // mapRenderer.drawMap();
 
-  //     bool visitLeft = shouldTravelTo(-1);
-  //     bool visitForward = shouldTravelTo(0);
-  //     bool visitRight = shouldTravelTo(1);
-  //     adjToVisit = visitLeft || visitForward || visitRight;
+      bool visitLeft = shouldTravelTo(-1);
+      bool visitForward = shouldTravelTo(0);
+      bool visitRight = shouldTravelTo(1);
+      adjToVisit = visitLeft || visitForward || visitRight;
+      Serial.println("got here");
+      drawItems(visitLeft, visitForward, visitRight);
+      // if not backtracking and shouldn't -> (prioritise left -> right-> forward) go there and save inverse instruction to cmds[cmdNumber] and cmdNumber++ 
+      if (!isBacktracking) {
+        if (adjToVisit) {
+          if (visitLeft) {
+            cmds[cmdNumber] = 'r';
+            cmdNumber++;
+            executeMovement('l');
+            cmds[cmdNumber] = 'f';
+            executeMovement('f');
+          }
+          else if (visitForward) {
+            cmds[cmdNumber] = 'f';
+            executeMovement('f');
+          }
+          else if (visitRight) {
+            cmds[cmdNumber] = 'l';
+            cmdNumber++;
+            executeMovement('r');
+            cmds[cmdNumber] = 'f';
+            executeMovement('f');
+          }
+          cmdNumber++;
+        }
+        // If "not backtracking" and should (ie dead end) -> turn around, set to is backtracking
+        else {
+          executeMovement('u');
+          isBacktracking = true;
+        }
+      }
+      else {
+        // if "backtracking" and shouldn't -> (do one more cmd (only if its a turn), turn around) = turn opposite way to cmd, now not backtracking 
+        if (adjToVisit) {
+          isBacktracking = false;
+          cmdNumber--;
+          if (cmds[cmdNumber] == 'l') {
+            executeMovement('r');
+          }
+          else if (cmds[cmdNumber] == 'r') {
+            executeMovement('l');
+          }
+          else {
+            executeMovement('u');
+          }
+        }
+        // if "backtracking" and should -> do latest command, subtract cmdNumber 
+        else {
+          cmdNumber--;
+          executeMovement(cmds[cmdNumber]);
+        }
+      }
+    }
 
-  //     // if not backtracking and shouldn't -> (prioritise left -> right-> forward) go there and save inverse instruction to cmds[cmdNumber] and cmdNumber++ 
-  //     if (!isBacktracking) {
-  //       if (adjToVisit) {
-  //         if (visitLeft) {
-  //           cmds[cmdNumber] = 'r';
-  //           executeMovement('l');
-  //         }
-  //         else if (visitForward) {
-  //           cmds[cmdNumber] = 'f';
-  //           executeMovement('f');
-  //         }
-  //         else if (visitRight) {
-  //           cmds[cmdNumber] = 'l';
-  //           executeMovement('r');
-  //         }
-  //         cmdNumber++;
-  //       }
-  //       // If "not backtracking" and should (ie dead end) -> turn around, set to is backtracking
-  //       else {
-  //         executeMovement('u');
-  //         isBacktracking = true;
-  //       }
-  //     }
-  //     else {
-  //       // if "backtracking" and shouldn't -> (do one more cmd (only if its a turn), turn around) = turn opposite way to cmd, now not backtracking 
-  //       if (adjToVisit) {
-  //         isBacktracking = false;
-  //         cmdNumber--;
-  //         if (cmds[cmdNumber] == 'l') {
-  //           executeMovement('r');
-  //         }
-  //         else if (cmds[cmdNumber] == 'r') {
-  //           executeMovement('l');
-  //         }
-  //         else {
-  //           executeMovement('u');
-  //         }
-  //       }
-  //       // if "backtracking" and should -> do latest command, subtract cmdNumber 
-  //       else {
-  //         cmdNumber--;
-  //         executeMovement(cmds[cmdNumber]);
-  //       }
-  //     }
-  //   }
+    executeMovement('u');
+  }
 
-  //   executeMovement('u');
-  // }
+  void drawItems(bool left, bool forward, bool right) {
+    float leftF = (left ? 1 : 0);
+    float forwardF = (forward ? 1 : 0);
+    float rightF = (right ? 1 : 0);
 
-  // void scanWalls() {
-  //   if (front_lidar.get_dist() < IS_WALL_DIST) {
-  //     map.setWall(robotX,robotY,robotOrientation);
-  //   }
-  //   if (left_lidar.get_dist() < IS_WALL_DIST) {
-  //     map.setWall(robotX, robotY, (robotOrientation + 3) % 4);
-  //   }
-  //   if (right_lidar.get_dist() < IS_WALL_DIST) {
-  //     map.setWall(robotX, robotY, (robotOrientation + 1) % 4); 
-  //   }
-  // }
+    display.firstPage();
+    do {
+      display.setFont(u8g2_font_4x6_tr); // very small font, 4px tall
 
-  // void visitCurrentCell() {
-  //   scanWalls();
-  //   map.visitCell(robotX, robotY);
-  // }
+      int lineHeight = 6; // 4px font + ~2px spacing
+      int startY = 6;     // top margin
 
-  // bool shouldTravelTo(int direction) {
-  //   int absoluteDirection = (robotOrientation + (direction + 4)) % 4;
-  //   return !map.cellVisited(robotX, robotY, absoluteDirection) && !map.wallExists(robotX, robotY, absoluteDirection);
-  // }
+      drawTextValueLine("Left:",        leftF,         0, startY + lineHeight * 0);
+      drawTextValueLine("Forward:",      forwardF,      0, startY + lineHeight * 1);
+      drawTextValueLine("Right:", rightF, 0, startY + lineHeight * 2);
+      // drawTextValueLine("Integral:",   controller.getIntegral(),   0, startY + lineHeight * 3);
+      // drawTextValueLine("Left:",      left_lidar.get_dist(),      0, startY + lineHeight * 1);
+      // drawTextValueLine("Forward:", front_lidar.get_dist(), 0, startY + lineHeight * 2);
+      // drawTextValueLine("Right:",   right_lidar.get_dist(),   0, startY + lineHeight * 3);
+      // drawTextValueLine("Target:",     controller.getTarget(),     0, startY + lineHeight * 4);
+      // drawTextValueLine("Zero:",       controller.getZero(),       0, startY + lineHeight * 5);
+      // drawTextValueLine("Odom θ:",     odom.getTheta(),            0, startY + lineHeight * 6);
+
+    } while (display.nextPage());
+  }
+
+  void scanWalls() {
+    if (front_lidar.get_dist() < IS_WALL_DIST) {
+      map.setWall(robotX,robotY,robotOrientation);
+    }
+    if (left_lidar.get_dist() < IS_WALL_DIST) {
+      map.setWall(robotX, robotY, (robotOrientation + 3) % 4);
+    }
+    if (right_lidar.get_dist() < IS_WALL_DIST) {
+      map.setWall(robotX, robotY, (robotOrientation + 1) % 4); 
+    }
+  }
+
+  void visitCurrentCell() {
+    scanWalls();
+    map.visitCell(robotX, robotY);
+  }
+
+  bool shouldTravelTo(int direction) {
+    int absoluteDirection = (robotOrientation + (direction + 4)) % 4;
+    return !map.cellVisited(robotX, robotY, absoluteDirection) && !map.wallExists(robotX, robotY, absoluteDirection);
+  }
 
   void moveForwardOneCell() {
     moveForwardDistance(180.0, general_speed);
@@ -420,6 +456,12 @@ struct Robot {
   }
 
   void executeMovement(char movement) {
+    // char str[2];
+    // str[0] = movement;
+    // str[1] = '\0';
+    // drawString(str);
+    delay(500);
+
     switch (movement) {
       case 'f': 
         moveForwardOneCell();
