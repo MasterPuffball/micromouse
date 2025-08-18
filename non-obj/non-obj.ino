@@ -21,8 +21,11 @@ float general_speed = 0.45;
 
 struct Robot {
   U8G2_SSD1306_128X64_NONAME_1_HW_I2C display{U8G2_R0, U8X8_PIN_NONE};
+
+  // Maps
   mtrn3100::Map map{};
-  // MapRenderer mapRenderer{display};
+  mtrn3100::MapRenderer mapRenderer{display, map};
+
   // Controllers
   static constexpr float KP1 = 2.3;
   static constexpr float KI1 = 0.2;
@@ -131,8 +134,8 @@ struct Robot {
     // } while (display.nextPage());
 
     exploreMap();
-    // mapRenderer.drawMap();
-	  // while (true) {}
+    mapRenderer.drawMap();
+	  while (true) {}
 
     // turnToAngle(0,0.5);
     // maintainDistance(100, 0.5); 
@@ -143,7 +146,6 @@ struct Robot {
     // maintainDistance(100, 0.5);
     // direction_controller.tune(KP4, KI4, i);
     // Serial.println(imu.getDirection());
-    delay(100);
     // getLeftDist();
     // getFrontDist();
     // getRightDist();
@@ -326,17 +328,16 @@ struct Robot {
     
     // Needs to start with butt against wall
     map.setWall(robotX,robotY,(robotOrientation + 2) % 4);
-    Serial.println("Start of loop");
+
     while (!(cmdNumber == 0 && !adjToVisit)) {
       visitCurrentCell();
-      // mapRenderer.drawMap();
+      mapRenderer.drawMap();
 
       bool visitLeft = shouldTravelTo(-1);
       bool visitForward = shouldTravelTo(0);
       bool visitRight = shouldTravelTo(1);
       adjToVisit = visitLeft || visitForward || visitRight;
-      Serial.println("got here");
-      drawItems(visitLeft, visitForward, visitRight);
+
       // if not backtracking and shouldn't -> (prioritise left -> right-> forward) go there and save inverse instruction to cmds[cmdNumber] and cmdNumber++ 
       if (!isBacktracking) {
         if (adjToVisit) {
@@ -378,7 +379,24 @@ struct Robot {
             executeMovement('l');
           }
           else {
-            executeMovement('u');
+            // This is so you dont have to do an unnecessary turn around of turning to go another way at a crossroads
+            // if (visitLeft) {
+            //   cmds[cmdNumber] = 'l';
+            //   cmdNumber++;
+            //   executeMovement('l');
+            //   cmds[cmdNumber] = 'f';
+            //   executeMovement('f');
+            // }
+            // else if (visitRight) {
+            //   cmds[cmdNumber] = 'r';
+            //   cmdNumber++;
+            //   executeMovement('r');
+            //   cmds[cmdNumber] = 'f';
+            //   executeMovement('f');
+            // }
+            // else{
+              executeMovement('u');
+            // }
           }
         }
         // if "backtracking" and should -> do latest command, subtract cmdNumber 
