@@ -35,17 +35,21 @@
 
 // Map Constants
 #define MAX_MOVEMENTS 100
-#define MAP_HEIGHT 10
-#define MAP_LENGTH 10
-#define MAX_NODES (MAP_WIDTH*MAP_LENGTH)
+#define MAP_HEIGHT 9
+#define MAP_LENGTH 9
+#define MAX_NODES (MAP_HEIGHT*MAP_LENGTH)
 #define UP 0
 #define RIGHT 1
 #define DOWN 2
 #define LEFT 3
 #define IS_WALL_DIST 150
 
+// Compact Map Storage Constants
+#define NUM_MAP_BITS (MAP_HEIGHT*MAP_LENGTH)
+#define NUM_MAP_BYTES ((NUM_MAP_BITS + 7) / 8)
+
 // Robot starting orientation
-#define STARTING_ORIENTATION (UP)
+#define STARTING_ORIENTATION (DOWN)
 #define STARTING_X 0
 #define STARTING_Y 0
 

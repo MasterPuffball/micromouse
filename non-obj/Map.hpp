@@ -7,68 +7,96 @@
 // For rendering, assume all far top and far left walls exist as they will be out of bounds 
 // and aren't saved for storage optimisation purposes
 namespace mtrn3100 {
+class CompactMap {
+public:
+  CompactMap() {
+    clear();
+  }
+
+  void clear() {
+    for (int i = 0; i < NUM_MAP_BYTES; i++) {
+      data[i] = 0;
+    }
+  }
+
+  void set(int x, int y, bool value) {
+    int idx = y * MAP_LENGTH + x;
+    int byteIdx = idx / 8;
+    int bitIdx = idx % 8;     // idx % 8
+
+    if (value) {
+      data[byteIdx] |= (1 << bitIdx);
+    }
+    else {
+      data[byteIdx] &= ~(1 << bitIdx);
+    }
+  }
+
+  bool get(int x, int y) const {
+    int idx = y * MAP_LENGTH + x;
+    int byteIdx = idx / 8;
+    int bitIdx  = idx % 8;
+    return (data[byteIdx] >> bitIdx) & 1;
+  }
+
+private:
+  uint8_t data[NUM_MAP_BYTES];
+};
 
 class Map {
 public:
   Map() {
-    // Initialise visited
-    for (int i = 0; i < MAP_LENGTH; i++) {
-      for (int j = 0; j < MAP_HEIGHT; j++) {
-        visited[i][j] = false;
-      }
-    }
-
     // Initialise has path to true everywhere (assume there are no walls in the maze)
     for (int i = 0; i < MAP_LENGTH - 1; i++) {
       for (int j = 0; j < MAP_HEIGHT - 1; j++) {
-        hasPath[i][j][0] = true;
-        hasPath[i][j][1] = true;
+        hasPathRight.set(i, j, true);
+        hasPathDown.set(i,j, true);
       }
     }	
   }
 	
 	void visitCell(int x, int y) {
-		if (!visited[x][y]) {
+		if (!visited.get(x, y)) {
 			numVisited++;
-			visited[x][y] = true;
+      visited.set(x, y, true);
 		}
 	}
 
 	void setWall(int x, int y, int direction) {
 		if(direction == UP) {
 			if (y <= 0) return;
-			hasPath[x][y-1][1] = false; 
+      hasPathDown.set(x, y-1, false);
 		}
 		if(direction == RIGHT) {
 			if (x >= MAP_LENGTH - 1) return;
-			hasPath[x+1][y][0] = false;
+      hasPathRight.set(x+1, y, false);
 		}
 		if(direction == DOWN) {
 			if (y >= MAP_HEIGHT - 1) return;
-			hasPath[x][y+1][1] = false;
+      hasPathDown.set(x, y+1, false);
 		}
 		if (direction == LEFT) {
 			if (x <= 0) return;
-			hasPath[x-1][y][0] = false;
+      hasPathRight.set(x-1, y, false);
 		}
 	}
 
 	bool wallExists(int x, int y, int direction) {
 		if(direction == UP) {
 			if (y <= 0) return true;
-			return !hasPath[x][y-1][1]; 
+      return !hasPathDown.get(x, y-1);
 		}
 		if(direction == RIGHT) {
 			if (x >= MAP_LENGTH - 1) return true;
-			return !hasPath[x+1][y][0];
+      return !hasPathRight.get(x+1, y);
 		}
 		if(direction == DOWN) {
 			if (y >= MAP_HEIGHT - 1) return true;
-			return !hasPath[x][y+1][1];
+      return !hasPathDown.get(x, y+1);
 		}
 		if (direction == LEFT) {
 			if (x <= 0) return true;
-			return !hasPath[x-1][y][0];
+      return !hasPathRight.get(x-1, y);
 		}
 
     return false;
@@ -92,28 +120,28 @@ public:
 	}
 
 	bool cellVisited(int x, int y) {
-    return visited[x][y];
+    return visited.get(x, y);
   }
 
 	bool cellVisited(int x, int y, int direction) {
 		if(direction == UP) {
 			if (y <= 0) return true;
-			return visited[x][y-1]; 
+      return visited.get(x, y-1);
 		}
 		if(direction == RIGHT) {
 			if (x >= MAP_LENGTH - 1) return true;
-			return visited[x+1][y];
+      return visited.get(x+1, y);
 		}
 		if(direction == DOWN) {
 			if (y >= MAP_HEIGHT - 1) return true;
-			return visited[x][y+1];
+      return visited.get(x, y+1);
 		}
 		if (direction == LEFT) {
 			if (x <= 0) return true;
-			return visited[x-1][y];
+      return visited.get(x-1, y);
 		}
 
-    return visited[x][y];
+    return visited.get(x, y);
   }
 
 	int getNumVisited() {
@@ -121,8 +149,9 @@ public:
 	}
 
 private:
-  bool visited[MAP_LENGTH][MAP_HEIGHT] = {false};
-  bool hasPath[MAP_LENGTH][MAP_HEIGHT][2] = {false}; // adjacency list, right and down from node
-  int numVisited = 1;
+  CompactMap visited;
+  CompactMap hasPathRight;
+  CompactMap hasPathDown;
+  uint8_t numVisited = 1;
 };
 }
