@@ -7,7 +7,8 @@
 // For rendering, assume all far top and far left walls exist as they will be out of bounds 
 // and aren't saved for storage optimisation purposes
 namespace mtrn3100 {
-
+class Compact2D {
+};
 class Map {
 public:
   Map() {

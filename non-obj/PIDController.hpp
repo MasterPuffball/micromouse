@@ -4,7 +4,6 @@
 #include "Constants.h"
 
 namespace mtrn3100 {
-
 class PIDController {
 public:
     PIDController(float kp, float ki, float kd, float isDir = false) : kp(kp), ki(ki), kd(kd), isDir(isDir) {}
@@ -12,8 +11,8 @@ public:
     // Compute the output signal required from the current/actual value.
     // Outputs positive if wants to move forward
     float compute(float input) {
-      curr_time = micros();
-      dt = static_cast<float>(curr_time - prev_time) / 1e6;
+      uint32_t curr_time = micros();
+      float dt = static_cast<float>(curr_time - prev_time) / 1e6;
       prev_time = curr_time;
 
       // Outputs positive if wants to turn left
@@ -163,8 +162,6 @@ public:
 
 public:
     uint32_t prev_time = micros();
-    uint32_t curr_time = micros();
-    float dt;
 
 private:
     float kp, ki, kd;

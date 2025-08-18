@@ -4,7 +4,6 @@
 #include "Constants.h"
 
 namespace mtrn3100 {
-
 class Encoder {
 public:
     Encoder(uint8_t enc1, uint8_t enc2, int num);
