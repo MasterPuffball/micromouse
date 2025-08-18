@@ -21,7 +21,7 @@ float general_speed = 0.45;
 
 struct Robot {
   U8G2_SSD1306_128X64_NONAME_1_HW_I2C display{U8G2_R0, U8X8_PIN_NONE};
-  // mtrn3100::Map map{};
+  mtrn3100::Map map{};
   // MapRenderer mapRenderer{display};
   // Controllers
   static constexpr float KP1 = 2.3;
@@ -445,7 +445,7 @@ struct Robot {
     }
     
     left_wheel.setSpeed(0);
-    right_wheel.setSpeed(0);x
+    right_wheel.setSpeed(0);
     delay(50);
   }
 };
