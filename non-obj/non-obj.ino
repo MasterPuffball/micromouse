@@ -379,7 +379,24 @@ struct Robot {
             executeMovement('l');
           }
           else {
-            executeMovement('u');
+            // This is so you dont have to do an unnecessary turn around of turning to go another way at a crossroads
+            // if (visitLeft) {
+            //   cmds[cmdNumber] = 'l';
+            //   cmdNumber++;
+            //   executeMovement('l');
+            //   cmds[cmdNumber] = 'f';
+            //   executeMovement('f');
+            // }
+            // else if (visitRight) {
+            //   cmds[cmdNumber] = 'r';
+            //   cmdNumber++;
+            //   executeMovement('r');
+            //   cmds[cmdNumber] = 'f';
+            //   executeMovement('f');
+            // }
+            // else{
+              executeMovement('u');
+            // }
           }
         }
         // if "backtracking" and should -> do latest command, subtract cmdNumber 
