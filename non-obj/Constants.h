@@ -9,10 +9,11 @@
 #define SLOPE_TOLERANCE 0.02
 #define DIRECTION_BIAS_STRENGTH 0.75
 #define DIFF_BIAS_STRENGTH 0
-#define MAX_DURATION 100000 // in millis
+#define MAX_DURATION 5000 // in millis
 
 // Wall following constants
 #define WALL_DIST 100
+#define WALL_STOPPING_DIST 60
 
 // PID 
 #define DERIVATIVE_DEADZONE 5
@@ -61,7 +62,15 @@
 #define STARTING_X 0
 #define STARTING_Y 0
 
-
+// Resetting IMU distance
+// 180/2 - (75/2) = 52.5 + (37.5 - 20)
+#define IMU_COUNT_MAX 1
+#define WALL_CENTER_DIST 70
+#define MAINTAIN_DIST_MAX 3000
+#define NUM_FIX_SAMPLES 10
+#define SCANNING_SPEED 10
+#define SCANNING_TIME_INTERVAL 70
+#define ANTI_SWING_TIME 450
 
 
 #endif  // CONSTANTS_H

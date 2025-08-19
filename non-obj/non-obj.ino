@@ -18,6 +18,7 @@ int curTime = 0;
 int setCursorFirst = 10;
 int setCursorSecond = 7;
 float general_speed = 0.45;
+int imuCounter = IMU_COUNT_MAX;
 
 struct Robot {
   U8G2_SSD1306_128X64_NONAME_1_HW_I2C display{U8G2_R0, U8X8_PIN_NONE};
@@ -133,15 +134,15 @@ struct Robot {
     //   mapRenderer.drawCompletion();
     // } while (display.nextPage());
 
-    exploreMap();
-    mapRenderer.drawMap();
-	  while (true) {}
+    // exploreMap();
+    // mapRenderer.drawMap();
+	  // while (true) {}
 
     // turnToAngle(0,0.5);
     // maintainDistance(100, 0.5); 
     // turnLeft90(); 
     // executeMovementString("frflflfrf");
-    // executeMovement('l');
+    executeMovement('f');
     // turnToAngle(90,0.4);
     // maintainDistance(100, 0.5);
     // direction_controller.tune(KP4, KI4, i);
@@ -252,7 +253,7 @@ struct Robot {
       left_wheel.setSpeed(leftMotorSignal);
       right_wheel.setSpeed(rightMotorSignal);
 
-      if ((direction_controller.isWithin(10) && left_controller.isWithin(DIST_TOLERANCE) && right_controller.isWithin(DIST_TOLERANCE)) || millis() - startTime > MAX_DURATION) {
+      if (front_lidar.get_dist() < WALL_STOPPING_DIST || (direction_controller.isWithin(10) && left_controller.isWithin(DIST_TOLERANCE) && right_controller.isWithin(DIST_TOLERANCE)) || millis() - startTime > MAX_DURATION) {        
         break;
       }
     }
@@ -308,6 +309,8 @@ struct Robot {
     // Set the wheels to go forward dist
     distance_controller.zeroAndSetTarget(0, distance);
 
+    long startTime = millis();
+
     while (true) {
       float directionalAdjustment = direction_controller.compute(imu.getDirection());
       float distanceAdjustment = distance_controller.compute(front_lidar.get_dist());
@@ -317,6 +320,10 @@ struct Robot {
 
       left_wheel.setSpeed(leftMotorSignal);
       right_wheel.setSpeed(rightMotorSignal);
+
+      if (distance_controller.isWithin(DIST_TOLERANCE) || millis() - startTime > MAX_DURATION) {
+        break;
+      }
     }
   }
 
@@ -466,7 +473,7 @@ struct Robot {
 
   // Right = positive angle here
   void turnToRelativeAngle(float angle) {
-	  turnToAngle(imu.normalizeAngle(imu.getDirection() - angle), general_speed);
+	turnToAngle(imu.normalizeAngle(imu.getDirection() - angle), general_speed);
   }
 
   void executeMovementString(char* cmdString) {
@@ -476,6 +483,8 @@ struct Robot {
   }
 
   void executeMovement(char movement) {
+    incrementIMUCounterAndReset();
+
     switch (movement) {
       case 'f': 
         moveForwardOneCell();
@@ -503,6 +512,84 @@ struct Robot {
     left_wheel.setSpeed(0);
     right_wheel.setSpeed(0);
     delay(50);
+  }
+
+  void alignToLowPoint(mtrn3100::Lidar lidar) {
+    uint8_t distArray[NUM_FIX_SAMPLES] = {};
+    float dirArray[NUM_FIX_SAMPLES] = {};
+
+    constexpr auto a{sizeof(dirArray) + sizeof(distArray)};
+
+    left_wheel.setSpeed(SCANNING_SPEED);
+    right_wheel.setSpeed(-SCANNING_SPEED);
+
+    delay(ANTI_SWING_TIME);
+
+    left_wheel.setSpeed(-SCANNING_SPEED);
+    right_wheel.setSpeed(SCANNING_SPEED);
+
+    for (uint8_t i = 0; i < NUM_FIX_SAMPLES; i++) {
+      dirArray[i] = imu.getDirection();
+      distArray[i] = lidar.get_dist();
+ 
+      delay(SCANNING_TIME_INTERVAL);
+    }
+
+    left_wheel.setSpeed(0);
+    right_wheel.setSpeed(0);
+
+    uint8_t minDistIndex = 0;
+    uint8_t minDist = distArray[0];
+    for (uint8_t i = 0; i < NUM_FIX_SAMPLES; i++) {
+      if (distArray[i] < minDist) {
+        minDist = distArray[i];
+        minDistIndex = i;
+      }
+      drawFloat((float)minDist);
+    }
+
+    turnToAngle(dirArray[minDistIndex], general_speed);
+  }
+
+  void incrementIMUCounterAndReset() {
+    imuCounter++;
+
+    if (imuCounter < IMU_COUNT_MAX) {
+      imuCounter = 0;
+      return;
+    }
+
+    // Check for nearby walls, chooses one of them
+    // -> Check Left Wall
+    // -> Check Right Wall 
+    // -> Check Front Wall
+    // -> Continue onto next cell
+    // -> -> turn until it is perpendicular to it
+
+    // leftWall is used as the sign for our robot when we align point
+    if (front_lidar.get_dist() < IS_WALL_DIST) {
+      alignToLowPoint(front_lidar);
+    }
+    else if (left_lidar.get_dist() < IS_WALL_DIST) {
+      alignToLowPoint(left_lidar);
+    } 
+    else if (right_lidar.get_dist() < IS_WALL_DIST) {
+      alignToLowPoint(right_lidar);
+    }
+    else {
+      return;
+    }
+
+    // // Wall following to make the distance right
+    // // Half the speed as its a minor distance
+    // maintainDistance(WALL_CENTER_DIST, general_speed/2);
+
+    // // Turn back to the right direction if we turned
+    // if (wallDirection == -1) {
+    //   turnToRelativeAngle(90);
+    // } else if (wallDirection == 1) {
+    //   turnToRelativeAngle(-90); 
+    // }
   }
 };
 
