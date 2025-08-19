@@ -223,9 +223,13 @@ struct Robot {
 
   void drawString(const char* message, const int x = setCursorFirst, const int y = setCursorSecond) {
     display.clearBuffer(); // Clear the internal memory
-    display.setCursor(x, y); // Set the cursor to the start position
-    display.print(message); // Print the message
-    display.sendBuffer(); // Transfer internal memory to the display
+    display.firstPage();
+    do {
+       display.setFont(u8g2_font_6x10_tr);
+      display.setCursor(x, y); // Set the cursor to the start position
+      display.print(message); // Print the message
+      display.sendBuffer(); // Transfer internal memory to the display
+    } while (display.nextPage());
   }
 
   void moveForwardDistance(uint16_t dist, float speed) {
@@ -371,32 +375,35 @@ struct Robot {
         // if "backtracking" and shouldn't -> (do one more cmd (only if its a turn), turn around) = turn opposite way to cmd, now not backtracking 
         if (adjToVisit) {
           isBacktracking = false;
-          cmdNumber--;
-          if (cmds[cmdNumber] == 'l') {
+          if (cmds[cmdNumber - 1] == 'l') {
             executeMovement('r');
+            cmdNumber--;
           }
-          else if (cmds[cmdNumber] == 'r') {
+          else if (cmds[cmdNumber - 1] == 'r') {
             executeMovement('l');
+            cmdNumber--;
           }
           else {
             // This is so you dont have to do an unnecessary turn around of turning to go another way at a crossroads
-            // if (visitLeft) {
-            //   cmds[cmdNumber] = 'l';
-            //   cmdNumber++;
-            //   executeMovement('l');
-            //   cmds[cmdNumber] = 'f';
-            //   executeMovement('f');
-            // }
-            // else if (visitRight) {
-            //   cmds[cmdNumber] = 'r';
-            //   cmdNumber++;
-            //   executeMovement('r');
-            //   cmds[cmdNumber] = 'f';
-            //   executeMovement('f');
-            // }
-            // else{
-              executeMovement('u');
-            // }
+            if (visitLeft) {
+              cmds[cmdNumber] = 'l';
+              executeMovement('l');
+              cmdNumber++;
+              cmds[cmdNumber] = 'f';
+              executeMovement('f');
+            }
+            else if (visitForward) {
+              cmds[cmdNumber] = 'f';
+              executeMovement('f');
+            }
+            else if (visitRight) {
+              cmds[cmdNumber] = 'r';
+              cmdNumber++;
+              executeMovement('r');
+              cmds[cmdNumber] = 'f';
+              executeMovement('f');
+            }
+            cmdNumber++;
           }
         }
         // if "backtracking" and should -> do latest command, subtract cmdNumber 
@@ -474,10 +481,6 @@ struct Robot {
   }
 
   void executeMovement(char movement) {
-    // char str[2];
-    // str[0] = movement;
-    // str[1] = '\0';
-    // drawString(str);
     delay(500);
 
     switch (movement) {

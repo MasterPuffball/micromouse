@@ -59,7 +59,7 @@ public:
   }
 
   float getCompletionPercentage() {
-    return ((map.getNumVisited()) / (CELL_SIZE)) * 100.0f;
+    return ((float)map.getNumVisited() / ((MAP_HEIGHT*MAP_LENGTH) - NON_EXISTENT_CELLS)) * 100.0f;
   }
 
   void drawCompletion() {
