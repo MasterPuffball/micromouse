@@ -152,6 +152,6 @@ private:
   CompactMap visited;
   CompactMap hasPathRight;
   CompactMap hasPathDown;
-  uint8_t numVisited = 1;
+  uint8_t numVisited = 0;
 };
 }
