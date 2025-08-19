@@ -179,8 +179,6 @@ struct Robot {
   void drawTelemetry(mtrn3100::PIDController controller) {
     display.firstPage();
     do {
-      display.setFont(u8g2_font_4x6_tr); // very small font, 4px tall
-
       int lineHeight = 6; // 4px font + ~2px spacing
       int startY = 6;     // top margin
 
@@ -225,7 +223,6 @@ struct Robot {
     display.clearBuffer(); // Clear the internal memory
     display.firstPage();
     do {
-       display.setFont(u8g2_font_6x10_tr);
       display.setCursor(x, y); // Set the cursor to the start position
       display.print(message); // Print the message
       display.sendBuffer(); // Transfer internal memory to the display
@@ -424,8 +421,6 @@ struct Robot {
 
     display.firstPage();
     do {
-      display.setFont(u8g2_font_4x6_tr); // very small font, 4px tall
-
       int lineHeight = 6; // 4px font + ~2px spacing
       int startY = 6;     // top margin
 
@@ -481,8 +476,6 @@ struct Robot {
   }
 
   void executeMovement(char movement) {
-    delay(500);
-
     switch (movement) {
       case 'f': 
         moveForwardOneCell();
@@ -515,6 +508,7 @@ struct Robot {
 
 void setup() {
   Wire.begin();
+  Wire.setWireTimeout(1000, true);
   Serial.begin(9600);
   Serial.println("Beginning Setup");
   delay(50);
