@@ -64,7 +64,6 @@ public:
 
   void drawCompletion() {
     u8g2.setCursor(75, 60);
-    u8g2.setFont(u8g2_font_4x6_tr);
     u8g2.print(getCompletionPercentage(), 2);
     u8g2.print("%");
   }
