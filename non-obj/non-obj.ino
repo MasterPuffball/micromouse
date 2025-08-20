@@ -37,12 +37,6 @@ struct Robot {
   static constexpr float KD2 = 0.1;
   mtrn3100::PIDController right_controller{KP2, KI2, KD2};
 
-  // Encoder direction controller
-  static constexpr float KP3 = 1.5;
-  static constexpr float KI3 = 0.1;
-  static constexpr float KD3 = 0.1;
-  mtrn3100::PIDController diff_controller{KP3, KI3, KD3};
-
   // True direction controller
   static constexpr float KP4 = 2.3;
   static constexpr float KI4 = 0.8;
@@ -54,6 +48,12 @@ struct Robot {
   static constexpr float KI5 = 0.3;
   static constexpr float KD5 = 0.1;
   mtrn3100::PIDController distance_controller{KP5, KI5, KD5};
+
+  // Centering Controller
+  static constexpr float KP6 = 0.8;
+  static constexpr float KI6 = 0.0;
+  static constexpr float KD6 = 0.1;
+  mtrn3100::PIDController center_controller{KP6, KI6, KD6};
 
   // Motors
   static constexpr int MOT2PWM = 9;
@@ -127,6 +127,7 @@ struct Robot {
   
   void loop() {
     // moveForwardOneCell();
+    // moveForwardDistance(1000.0, general_speed);
     
     // display.firstPage();
     // do {
@@ -141,6 +142,7 @@ struct Robot {
     // maintainDistance(100, 0.5); 
     // turnLeft90(); 
     // executeMovementString("frflflfrf");
+    // executeMovementString("ffflfrfrffflfrfrffrff");
     // executeMovement('l');
     // turnToAngle(90,0.4);
     // maintainDistance(100, 0.5);
@@ -238,16 +240,53 @@ struct Robot {
     left_controller.zeroAndSetTarget(left_wheel.getDistanceMoved(), dist);
     right_controller.zeroAndSetTarget(right_wheel.getDistanceMoved(), dist);
 
+    int leftDist = 52;
+    int rightDist = 52;
+    bool leftDistExists = left_lidar.get_dist() < 100;
+    bool rightDistExists = left_lidar.get_dist() < 100;
+    // int wallAdjCounter = 0;
     long startTime = millis();
 
     while (true) {
       // drawTelemetry(left_controller);
-      float directionalAdjustment = direction_controller.compute(imu.getDirection());
       float leftSignal = left_controller.compute(left_wheel.getDistanceMoved());
       float rightSignal = right_controller.compute(right_wheel.getDistanceMoved());
 
-      float leftMotorSignal = (constrain(leftSignal, -100, 100) + (directionalAdjustment * DIRECTION_BIAS_STRENGTH)) * speed;
-      float rightMotorSignal = (constrain(rightSignal, -100, 100) - (directionalAdjustment * DIRECTION_BIAS_STRENGTH)) * speed;
+      // Centering robot inbetween the two walls
+      float wallDiff = 0;
+      int leftCurrDist = left_lidar.get_dist();
+      int rightCurrDist = right_lidar.get_dist();
+
+      bool leftExists = leftCurrDist < 100; // to do: change 100 to a #define
+      bool rightExists =  rightCurrDist < 100;
+      bool usingWall = true;
+      if (rightExists && leftExists && leftDistExists && rightDistExists) {
+        wallDiff = (float)(rightCurrDist - leftCurrDist);
+      } else if (leftExists && leftDistExists) {
+        wallDiff = (float)(leftDist - leftCurrDist);
+      } else if (rightExists && rightDistExists) {
+        wallDiff = (float)(rightDist -  rightCurrDist);
+      } else {
+        wallDiff = direction_controller.compute(imu.getDirection());
+        usingWall = false;
+      }
+
+      // if (wallAdjCounter > NUM_TIMEOUT + NUM_DO) {
+      //   wallAdjCounter = 0;
+      // }
+      // wallAdjCounter++;
+
+      float leftMotorSignal;
+      float rightMotorSignal;
+      if (usingWall) {
+        leftMotorSignal = (constrain(leftSignal, -100, 100) + (wallDiff* WALL_BIAS_STRENGTH)) * speed; //  * DIRECTION_BIAS_STRENGTH)
+        rightMotorSignal = (constrain(rightSignal, -100, 100) - (wallDiff* WALL_BIAS_STRENGTH)) * speed;
+      }
+      else {
+        leftMotorSignal = (constrain(leftSignal, -100, 100) + (wallDiff* DIRECTION_BIAS_STRENGTH)) * speed; //  * DIRECTION_BIAS_STRENGTH)
+        rightMotorSignal = (constrain(rightSignal, -100, 100) - (wallDiff* DIRECTION_BIAS_STRENGTH)) * speed;
+      }
+      
 
       left_wheel.setSpeed(leftMotorSignal);
       right_wheel.setSpeed(rightMotorSignal);
@@ -266,10 +305,6 @@ struct Robot {
     float startDirection = imu.getDirection();
     direction_controller.zeroAndSetTarget(startDirection, angle);
 
-    float leftZero = left_wheel.getDistanceMoved();
-    float rightZero = right_wheel.getDistanceMoved(); 
-    diff_controller.zeroAndSetTarget(0, 0);
-
     long startTime = millis();
 
     while (true) {
@@ -280,13 +315,8 @@ struct Robot {
       // Serial.println(direction);
       // drawFloat(direction);
 
-      float leftDiff = left_wheel.getDistanceMoved() - leftZero;
-      float rightDiff = -(right_wheel.getDistanceMoved() - rightZero);
-      // +ve = left forward /-ve means send left wheel back
-      float diffAdjustment = diff_controller.compute(leftDiff - rightDiff);
-
-      float leftMotorSignal = (constrain(directionalAdjustment, -100, 100) + (diffAdjustment * DIFF_BIAS_STRENGTH)) * speed;
-      float rightMotorSignal = (constrain(-directionalAdjustment, -100, 100) - (diffAdjustment * DIFF_BIAS_STRENGTH)) * speed;
+      float leftMotorSignal = (constrain(directionalAdjustment, -100, 100)) * speed;
+      float rightMotorSignal = (constrain(-directionalAdjustment, -100, 100)) * speed;
 
       left_wheel.setSpeed(leftMotorSignal);
       right_wheel.setSpeed(rightMotorSignal);

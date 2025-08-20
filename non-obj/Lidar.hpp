@@ -21,6 +21,14 @@ public:
         return sensor.readRangeSingleMillimeters();
     }
 
+    bool wall_in_range() {
+        if (sensor.readRangeSingleMillimeters() < 100) {
+            return true;
+        }
+
+        return false;
+    }
+
 private:
     VL6180X sensor;
     const uint8_t init_pin;
