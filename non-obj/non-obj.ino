@@ -18,6 +18,7 @@ int curTime = 0;
 int setCursorFirst = 10;
 int setCursorSecond = 7;
 float general_speed = 0.45;
+float i = 0.1;
 
 struct Robot {
   U8G2_SSD1306_128X64_NONAME_1_HW_I2C display{U8G2_R0, U8X8_PIN_NONE};
@@ -38,21 +39,29 @@ struct Robot {
   mtrn3100::PIDController right_controller{KP2, KI2, KD2};
 
   // Encoder direction controller
-  static constexpr float KP3 = 1.5;
-  static constexpr float KI3 = 0.1;
-  static constexpr float KD3 = 0.1;
-  mtrn3100::PIDController diff_controller{KP3, KI3, KD3};
+  // static constexpr float KP3 = 1.5;
+  // static constexpr float KI3 = 0.1;
+  // static constexpr float KD3 = 0.1;
+  // mtrn3100::PIDController diff_controller{KP3, KI3, KD3};
 
   // True direction controller
   static constexpr float KP4 = 2.3;
-  static constexpr float KI4 = 0.8;
+  static constexpr float KI4 = 0.75;
   static constexpr float KD4 = 0.08;
   mtrn3100::PIDController direction_controller{KP4, KI4, KD4, true};
 
   // Distance Controller
-  static constexpr float KP5 = 1.5;
-  static constexpr float KI5 = 0.3;
-  static constexpr float KD5 = 0.1;
+  // static constexpr float KP5 = 1.5;
+  // static constexpr float KI5 = 0.3;
+  // static constexpr float KD5 = 0.1;
+
+  // static constexpr float KP5 = 2.5;
+  // static constexpr float KI5 = 0.2;
+  // static constexpr float KD5 = 0.3;
+
+  static constexpr float KP5 = 1.3;
+  static constexpr float KI5 = 0.1;
+  static constexpr float KD5 = 0.2;
   mtrn3100::PIDController distance_controller{KP5, KI5, KD5};
 
   // Motors
@@ -133,14 +142,16 @@ struct Robot {
     //   mapRenderer.drawCompletion();
     // } while (display.nextPage());
 
-    exploreMap();
-    mapRenderer.drawMap();
-	  while (true) {}
+    // exploreMap();
+    // mapRenderer.drawMap();
+	  // while (true) {}
 
     // turnToAngle(0,0.5);
     // maintainDistance(100, 0.5); 
     // turnLeft90(); 
-    // executeMovementString("frflflfrf");
+    distance_controller.tune(KP5 + i, KI5, KD5);
+    executeMovementString("l");
+    // i += 0.1;
     // executeMovement('l');
     // turnToAngle(90,0.4);
     // maintainDistance(100, 0.5);
@@ -183,12 +194,13 @@ struct Robot {
       int startY = 6;     // top margin
 
       drawTextValueLine("IMU:",        imu.getDirection(),         0, startY + lineHeight * 0);
-      // drawTextValueLine("Error:",      controller.getError(),      0, startY + lineHeight * 1);
-      // drawTextValueLine("Derivative:", controller.getDerivative(), 0, startY + lineHeight * 2);
-      // drawTextValueLine("Integral:",   controller.getIntegral(),   0, startY + lineHeight * 3);
-      drawTextValueLine("Left:",      left_lidar.get_dist(),      0, startY + lineHeight * 1);
-      drawTextValueLine("Forward:", front_lidar.get_dist(), 0, startY + lineHeight * 2);
-      drawTextValueLine("Right:",   right_lidar.get_dist(),   0, startY + lineHeight * 3);
+      drawTextValueLine("Error:",      controller.getError(),      0, startY + lineHeight * 1);
+      drawTextValueLine("Derivative:", controller.getDerivative(), 0, startY + lineHeight * 2);
+      drawTextValueLine("Integral:",   controller.getIntegral(),   0, startY + lineHeight * 3);
+      // drawTextValueLine("Left:",      left_lidar.get_dist(),      0, startY + lineHeight * 1);
+      // drawTextValueLine("Forward:", front_lidar.get_dist(), 0, startY + lineHeight * 2);
+      // drawTextValueLine("P:",   distance_controller.getP(),   0, startY + lineHeight * 2);
+      // drawTextValueLine("Current:",   pos,   0, startY + lineHeight * 3);
       drawTextValueLine("Target:",     controller.getTarget(),     0, startY + lineHeight * 4);
       drawTextValueLine("Zero:",       controller.getZero(),       0, startY + lineHeight * 5);
       drawTextValueLine("Odom θ:",     odom.getTheta(),            0, startY + lineHeight * 6);
@@ -234,6 +246,8 @@ struct Robot {
     float startDirection = imu.getDirection();
     direction_controller.zeroAndSetTarget(startDirection, startDirection);
 
+    // distance_controller.zeroAndSetTarget((left_wheel.getDistanceMoved() + right_wheel.getDistanceMoved()) / 2, dist);
+
     // Set the wheels to go forward dist
     left_controller.zeroAndSetTarget(left_wheel.getDistanceMoved(), dist);
     right_controller.zeroAndSetTarget(right_wheel.getDistanceMoved(), dist);
@@ -241,8 +255,10 @@ struct Robot {
     long startTime = millis();
 
     while (true) {
-      // drawTelemetry(left_controller);
       float directionalAdjustment = direction_controller.compute(imu.getDirection());
+      // float newPos = (left_wheel.getDistanceMoved() + right_wheel.getDistanceMoved()) / 2;
+      // float distanceAdjustment = distance_controller.compute(newPos);
+      //  drawTelemetry(distance_controller, newPos);
       float leftSignal = left_controller.compute(left_wheel.getDistanceMoved());
       float rightSignal = right_controller.compute(right_wheel.getDistanceMoved());
 
@@ -252,7 +268,7 @@ struct Robot {
       left_wheel.setSpeed(leftMotorSignal);
       right_wheel.setSpeed(rightMotorSignal);
 
-      if ((direction_controller.isWithin(10) && left_controller.isWithin(DIST_TOLERANCE) && right_controller.isWithin(DIST_TOLERANCE)) || millis() - startTime > MAX_DURATION) {
+      if ((direction_controller.isWithin(10) /*&& distance_controller.isWithin(DIST_TOLERANCE)*/&& left_controller.isWithin(DIST_TOLERANCE) && right_controller.isWithin(DIST_TOLERANCE)) || millis() - startTime > MAX_DURATION) {
         break;
       }
     }
@@ -268,25 +284,25 @@ struct Robot {
 
     float leftZero = left_wheel.getDistanceMoved();
     float rightZero = right_wheel.getDistanceMoved(); 
-    diff_controller.zeroAndSetTarget(0, 0);
+    // diff_controller.zeroAndSetTarget(0, 0);
 
     long startTime = millis();
 
     while (true) {
-      // drawTelemetry(direction_controller);
+      drawTelemetry(direction_controller);
       
       float direction = imu.getDirection();
       float directionalAdjustment = direction_controller.compute(direction);
       // Serial.println(direction);
       // drawFloat(direction);
 
-      float leftDiff = left_wheel.getDistanceMoved() - leftZero;
-      float rightDiff = -(right_wheel.getDistanceMoved() - rightZero);
+      // float leftDiff = left_wheel.getDistanceMoved() - leftZero;
+      // float rightDiff = -(right_wheel.getDistanceMoved() - rightZero);
       // +ve = left forward /-ve means send left wheel back
-      float diffAdjustment = diff_controller.compute(leftDiff - rightDiff);
+      // float diffAdjustment = diff_controller.compute(leftDiff - rightDiff);
 
-      float leftMotorSignal = (constrain(directionalAdjustment, -100, 100) + (diffAdjustment * DIFF_BIAS_STRENGTH)) * speed;
-      float rightMotorSignal = (constrain(-directionalAdjustment, -100, 100) - (diffAdjustment * DIFF_BIAS_STRENGTH)) * speed;
+      float leftMotorSignal = (constrain(directionalAdjustment, -100, 100) /*+ (diffAdjustment * DIFF_BIAS_STRENGTH)*/) * speed;
+      float rightMotorSignal = (constrain(-directionalAdjustment, -100, 100) /*- (diffAdjustment * DIFF_BIAS_STRENGTH)*/) * speed;
 
       left_wheel.setSpeed(leftMotorSignal);
       right_wheel.setSpeed(rightMotorSignal);
@@ -438,7 +454,9 @@ struct Robot {
     } while (display.nextPage());
   }
 
-  void scanWalls() {
+  void visitCurrentCell() {
+    map.visitCell(robotX, robotY);
+
     if (front_lidar.get_dist() < IS_WALL_DIST) {
       map.setWall(robotX,robotY,robotOrientation);
     }
@@ -450,23 +468,19 @@ struct Robot {
     }
   }
 
-  void visitCurrentCell() {
-    scanWalls();
-    map.visitCell(robotX, robotY);
-  }
-
   bool shouldTravelTo(int direction) {
     int absoluteDirection = (robotOrientation + (direction + 4)) % 4;
     return !map.cellVisited(robotX, robotY, absoluteDirection) && !map.wallExists(robotX, robotY, absoluteDirection);
   }
 
   void moveForwardOneCell() {
-    moveForwardDistance(180.0, general_speed);
+    moveForwardDistance(150, general_speed);
   }
 
   // Right = positive angle here
   void turnToRelativeAngle(float angle) {
 	  turnToAngle(imu.normalizeAngle(imu.getDirection() - angle), general_speed);
+    drawTelemetry(direction_controller);
   }
 
   void executeMovementString(char* cmdString) {
@@ -517,6 +531,14 @@ void setup() {
   constexpr auto a{sizeof(Robot)};
   constexpr auto b{sizeof(mtrn3100::Map)};
   constexpr auto c{sizeof(mtrn3100::PIDController)};
+  constexpr auto d{sizeof(mtrn3100::Encoder)};
+  constexpr auto e{sizeof(mtrn3100::Motor)};
+  constexpr auto f{sizeof(mtrn3100::Wheel)};
+  constexpr auto g{sizeof(U8G2_SSD1306_128X64_NONAME_1_HW_I2C)};
+  constexpr auto h{sizeof(mtrn3100::MapRenderer)};
+  constexpr auto i{sizeof(mtrn3100::Lidar)};
+  constexpr auto j{sizeof(mtrn3100::IMU)};
+  constexpr auto k{sizeof(MPU6050)};
 
   robot.begin();
   

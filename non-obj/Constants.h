@@ -3,7 +3,7 @@
 #define CONSTANTS_H
 
 // Controls Params
-#define ANGLE_TOLERANCE 1
+#define ANGLE_TOLERANCE 0.5
 #define DIST_TOLERANCE 5
 #define DIFF_TOLERANCE 3
 #define SLOPE_TOLERANCE 0.02
@@ -18,7 +18,7 @@
 #define DERIVATIVE_DEADZONE 5
 #define INCREMENT_CLAMP 10
 #define INTEGRAL_CLAMP 20
-#define NUM_STEADY 5
+#define NUM_STEADY 10
 #define STEADY_TOLERANCE 2
 
 // IMU
