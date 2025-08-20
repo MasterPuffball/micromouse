@@ -9,7 +9,7 @@
 #define SLOPE_TOLERANCE 0.02
 #define DIRECTION_BIAS_STRENGTH 0.75
 #define DIFF_BIAS_STRENGTH 0
-#define MAX_DURATION 100000 // in millis
+#define MAX_DURATION 5000 // in millis
 
 // Wall following constants
 #define WALL_DIST 100
@@ -58,8 +58,8 @@
 
 // Robot starting orientation
 #define STARTING_ORIENTATION (DOWN)
-#define STARTING_X 0
-#define STARTING_Y 0
+#define STARTING_X 8
+#define STARTING_Y 2
 
 
 

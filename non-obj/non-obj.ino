@@ -37,12 +37,6 @@ struct Robot {
   static constexpr float KD2 = 0.1;
   mtrn3100::PIDController right_controller{KP2, KI2, KD2};
 
-  // Encoder direction controller
-  static constexpr float KP3 = 1.5;
-  static constexpr float KI3 = 0.1;
-  static constexpr float KD3 = 0.1;
-  mtrn3100::PIDController diff_controller{KP3, KI3, KD3};
-
   // True direction controller
   static constexpr float KP4 = 2.3;
   static constexpr float KI4 = 0.8;
@@ -126,38 +120,13 @@ struct Robot {
   }
   
   void loop() {
-    // moveForwardOneCell();
-    
-    // display.firstPage();
-    // do {
-    //   mapRenderer.drawCompletion();
-    // } while (display.nextPage());
+    // executeMovementString("lffrlfrlfrfr");
+
+    // runScript("f101 r22 f3 r68 l90 f1 r10 f2");
 
     exploreMap();
-    mapRenderer.drawMap();
-	  while (true) {}
-
-    // turnToAngle(0,0.5);
-    // maintainDistance(100, 0.5); 
-    // turnLeft90(); 
-    // executeMovementString("frflflfrf");
-    // executeMovement('l');
-    // turnToAngle(90,0.4);
-    // maintainDistance(100, 0.5);
-    // direction_controller.tune(KP4, KI4, i);
-    // Serial.println(imu.getDirection());
-    // getLeftDist();
-    // getFrontDist();
-    // getRightDist();
-    // turnRight90();
-    // testPrintLines();
-    
-    // drawTelemetry(direction_controller);
-    // executeMovementString("lfrfflfr");
-    // executeMovementString("ffllfrfr");
-    // turnToAngle(-90, 0.3);
-    // executeMovementString("r");
-
+    // mapRenderer.drawMap();
+	  // while (true) {}
   }
 
   void initScreen() {
@@ -252,7 +221,7 @@ struct Robot {
       left_wheel.setSpeed(leftMotorSignal);
       right_wheel.setSpeed(rightMotorSignal);
 
-      if ((direction_controller.isWithin(10) && left_controller.isWithin(DIST_TOLERANCE) && right_controller.isWithin(DIST_TOLERANCE)) || millis() - startTime > MAX_DURATION) {
+      if (front_lidar.get_dist() < 75||(direction_controller.isWithin(10) && left_controller.isWithin(DIST_TOLERANCE) && right_controller.isWithin(DIST_TOLERANCE)) || millis() - startTime > MAX_DURATION) {
         break;
       }
     }
@@ -266,10 +235,6 @@ struct Robot {
     float startDirection = imu.getDirection();
     direction_controller.zeroAndSetTarget(startDirection, angle);
 
-    float leftZero = left_wheel.getDistanceMoved();
-    float rightZero = right_wheel.getDistanceMoved(); 
-    diff_controller.zeroAndSetTarget(0, 0);
-
     long startTime = millis();
 
     while (true) {
@@ -280,13 +245,8 @@ struct Robot {
       // Serial.println(direction);
       // drawFloat(direction);
 
-      float leftDiff = left_wheel.getDistanceMoved() - leftZero;
-      float rightDiff = -(right_wheel.getDistanceMoved() - rightZero);
-      // +ve = left forward /-ve means send left wheel back
-      float diffAdjustment = diff_controller.compute(leftDiff - rightDiff);
-
-      float leftMotorSignal = (constrain(directionalAdjustment, -100, 100) + (diffAdjustment * DIFF_BIAS_STRENGTH)) * speed;
-      float rightMotorSignal = (constrain(-directionalAdjustment, -100, 100) - (diffAdjustment * DIFF_BIAS_STRENGTH)) * speed;
+      float leftMotorSignal = (constrain(directionalAdjustment, -100, 100)) * speed;
+      float rightMotorSignal = (constrain(-directionalAdjustment, -100, 100)) * speed;
 
       left_wheel.setSpeed(leftMotorSignal);
       right_wheel.setSpeed(rightMotorSignal);
@@ -473,6 +433,51 @@ struct Robot {
     for (int i = 0; cmdString[i] != '\0'; ++i) {
       executeMovement(cmdString[i]);
     }
+  }
+
+  void runScript(const char* script) {
+    while (*script) {
+      while (*script == ' ') script++;   // skip spaces
+      if (!*script) break;
+
+      char cmd = *script++;              // first char = command
+      float val = atof(script);          // number right after it
+
+      // skip over digits/decimal in the string
+      while ((*script >= '0' && *script <= '9') || *script == '.') {
+        script++;
+      }
+
+
+      // run the command
+      executeMovement(cmd, val);
+    }
+  }
+
+  void executeMovement(char movement, float value) {
+    switch (movement) {
+      case 'f':
+        moveForwardDistance(value, general_speed);
+        // Serial.print("Moving forward: ");
+        // Serial.println(value);
+        break;
+
+      case 'l':
+        turnToRelativeAngle(-value);
+        // Serial.print("Moving left: ");
+        // Serial.println(value);
+        break;
+
+      case 'r':
+        turnToRelativeAngle(value);
+        // Serial.print("Moving right: ");
+        // Serial.println(value);
+        break;
+    }
+
+    left_wheel.setSpeed(0);
+    right_wheel.setSpeed(0);
+    delay(50);
   }
 
   void executeMovement(char movement) {
