@@ -242,9 +242,14 @@ struct Robot {
 
     int leftDist = 52;
     int rightDist = 52;
-    bool leftDistExists = left_lidar.get_dist() < 100;
-    bool rightDistExists = left_lidar.get_dist() < 100;
-    // int wallAdjCounter = 0;
+    bool leftDistExists = left_lidar.get_dist() < 80;
+    bool rightDistExists = left_lidar.get_dist() < 80;
+
+    // int leftDist = left_lidar.get_dist();
+    // int rightDist = left_lidar.get_dist();
+    // bool leftDistExists = leftDist < 100;
+    // bool rightDistExists = rightDist < 100;
+    int wallAdjCounter = 0;
     long startTime = millis();
 
     while (true) {
@@ -257,8 +262,8 @@ struct Robot {
       int leftCurrDist = left_lidar.get_dist();
       int rightCurrDist = right_lidar.get_dist();
 
-      bool leftExists = leftCurrDist < 100; // to do: change 100 to a #define
-      bool rightExists =  rightCurrDist < 100;
+      bool leftExists = leftCurrDist < 80; // to do: change 100 to a #define
+      bool rightExists =  rightCurrDist < 80;
       bool usingWall = true;
       if (rightExists && leftExists && leftDistExists && rightDistExists) {
         wallDiff = (float)(rightCurrDist - leftCurrDist);
@@ -274,8 +279,9 @@ struct Robot {
       // if (wallAdjCounter > NUM_TIMEOUT + NUM_DO) {
       //   wallAdjCounter = 0;
       // }
-      // wallAdjCounter++;
+      wallAdjCounter++;
 
+      // if (wallAdjCounter % 2) {
       float leftMotorSignal;
       float rightMotorSignal;
       if (usingWall) {
@@ -286,12 +292,16 @@ struct Robot {
         leftMotorSignal = (constrain(leftSignal, -100, 100) + (wallDiff* DIRECTION_BIAS_STRENGTH)) * speed; //  * DIRECTION_BIAS_STRENGTH)
         rightMotorSignal = (constrain(rightSignal, -100, 100) - (wallDiff* DIRECTION_BIAS_STRENGTH)) * speed;
       }
-      
 
       left_wheel.setSpeed(leftMotorSignal);
       right_wheel.setSpeed(rightMotorSignal);
+      // }
 
       if ((direction_controller.isWithin(10) && left_controller.isWithin(DIST_TOLERANCE) && right_controller.isWithin(DIST_TOLERANCE)) || millis() - startTime > MAX_DURATION) {
+        break;
+      }
+
+      if (front_lidar.get_dist() < 75) {
         break;
       }
     }
@@ -491,7 +501,7 @@ struct Robot {
   }
 
   void moveForwardOneCell() {
-    moveForwardDistance(180.0, general_speed);
+    moveForwardDistance(185.0, general_speed); ///////////////////////////////////////////////////////////////////////////// CHANGE THIS ABCK TO 180
   }
 
   // Right = positive angle here
