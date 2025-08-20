@@ -137,6 +137,7 @@ struct Robot {
     exploreMap();
     mapRenderer.drawMap();
 	  while (true) {}
+    // runScript("f1 r90 f2 l40 f1.3 r42 f1.2 l17 f0.7 r15 f0.1 l90 f1 r90 f2 r90 f5 l90 f1 l90 f3");
 
     // turnToAngle(0,0.5);
     // maintainDistance(100, 0.5); 
@@ -293,9 +294,20 @@ struct Robot {
         rightMotorSignal = (constrain(rightSignal, -100, 100) - (wallDiff* DIRECTION_BIAS_STRENGTH)) * speed;
       }
 
+      // if (front_lidar.get_dist() < 75) {
+      //   wallDiff = direction_controller.compute(imu.getDirection());
+      //   leftMotorSignal = (constrain(leftSignal, -100, 100) + (wallDiff* DIRECTION_BIAS_STRENGTH)) * speed; //  * DIRECTION_BIAS_STRENGTH)
+      //   rightMotorSignal = (constrain(rightSignal, -100, 100) - (wallDiff* DIRECTION_BIAS_STRENGTH)) * speed;
+      //   left_wheel.setSpeed(leftMotorSignal);
+      //   right_wheel.setSpeed(rightMotorSignal);
+      //   break;
+      // }
+
       left_wheel.setSpeed(leftMotorSignal);
       right_wheel.setSpeed(rightMotorSignal);
       // }
+
+      
 
       if ((direction_controller.isWithin(10) && left_controller.isWithin(DIST_TOLERANCE) && right_controller.isWithin(DIST_TOLERANCE)) || millis() - startTime > MAX_DURATION) {
         break;
@@ -501,7 +513,7 @@ struct Robot {
   }
 
   void moveForwardOneCell() {
-    moveForwardDistance(185.0, general_speed); ///////////////////////////////////////////////////////////////////////////// CHANGE THIS ABCK TO 180
+    moveForwardDistance(200.0, general_speed); ///////////////////////////////////////////////////////////////////////////// CHANGE THIS ABCK TO 180
   }
 
   // Right = positive angle here
@@ -513,6 +525,59 @@ struct Robot {
     for (int i = 0; cmdString[i] != '\0'; ++i) {
       executeMovement(cmdString[i]);
     }
+  }
+
+  void runScript(const char* script) {
+    while (*script) {
+      while (*script == ' ') script++;   // skip spaces
+      if (!*script) break;
+
+      char cmd = *script++;              // first char = command
+      float val = atof(script);          // number right after it
+
+      // skip over digits/decimal in the string
+      while ((*script >= '0' && *script <= '9') || *script == '.')
+        script++;
+
+      // run the command
+      executeNon90Movement(cmd, val);
+    }
+  }
+
+  void executeNon90Movement(char movement, float value) {
+    switch (movement) {
+      case 'f':
+        for (int i = 0; i < (int)value; i++) {
+          moveForwardOneCell();
+          switch (robotOrientation) {
+            case UP:    robotY -= 1; break;
+            case RIGHT: robotX += 1; break;
+            case DOWN:  robotY += 1; break;
+            case LEFT:  robotX -= 1; break;
+          }
+        }
+        
+        break;
+
+      case 'l':
+        turnToRelativeAngle(-value);
+        robotOrientation = (robotOrientation - (int)(value / 90) + 4) % 4;
+        break;
+
+      case 'r':
+        turnToRelativeAngle(value);
+        robotOrientation = (robotOrientation + (int)(value / 90)) % 4;
+        break;
+
+      case 'u':
+        turnToRelativeAngle(value);  // normally 180
+        robotOrientation = (robotOrientation + 2) % 4;
+        break;
+    }
+
+    left_wheel.setSpeed(0);
+    right_wheel.setSpeed(0);
+    delay(50);
   }
 
   void executeMovement(char movement) {
