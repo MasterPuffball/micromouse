@@ -126,41 +126,13 @@ struct Robot {
   }
   
   void loop() {
-    // moveForwardOneCell();
-    // moveForwardDistance(1000.0, general_speed);
-    
-    // display.firstPage();
-    // do {
-    //   mapRenderer.drawCompletion();
-    // } while (display.nextPage());
+    // executeMovementString("lffrlfrlfrfr");
+
+    // runScript("f101 r22 f3 r68 l90 f1 r10 f2");
 
     exploreMap();
-    mapRenderer.drawMap();
-	  while (true) {}
-    // runScript("f1 r90 f2 l40 f1.3 r42 f1.2 l17 f0.7 r15 f0.1 l90 f1 r90 f2 r90 f5 l90 f1 l90 f3");
-
-    // turnToAngle(0,0.5);
-    // maintainDistance(100, 0.5); 
-    // turnLeft90(); 
-    // executeMovementString("frflflfrf");
-    // executeMovementString("ffflfrfrffflfrfrffrff");
-    // executeMovement('l');
-    // turnToAngle(90,0.4);
-    // maintainDistance(100, 0.5);
-    // direction_controller.tune(KP4, KI4, i);
-    // Serial.println(imu.getDirection());
-    // getLeftDist();
-    // getFrontDist();
-    // getRightDist();
-    // turnRight90();
-    // testPrintLines();
-    
-    // drawTelemetry(direction_controller);
-    // executeMovementString("lfrfflfr");
-    // executeMovementString("ffllfrfr");
-    // turnToAngle(-90, 0.3);
-    // executeMovementString("r");
-
+    // mapRenderer.drawMap();
+      // while (true) {}
   }
 
   void initScreen() {
