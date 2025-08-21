@@ -371,7 +371,7 @@ def polyline_to_commands(
     pts_px, img_h, img_w, rows, cols, start_dir='E',
     angle_tol_deg=5.0, round_angle_to=1,
     mode='repeat_f',            # 'repeat_f' or 'fN'
-    cells_round_to=1,           # 1 -> integers; 10 -> 0.1 cells; 100 -> 0.01 cells
+    cells_round_to=1, # 1 -> integers; 10 -> 0.1 cells; 100 -> 0.01 cells
     numeric_prefix=False        # <<< NEW: if True and mode='fN', emit '0.3f' instead of 'f0.3'
 ):
     import math
@@ -446,9 +446,12 @@ def polyline_to_commands(
         parts = []
         for t in cmds:
             if t[0] == 'F':
-                v = t[1]
+                v_cells = t[1]         
+                v = v_cells * 180         
+                v = round(v / 1) * 1 
+                # pretty print (ints without .0)
                 v_str = f"{int(v)}" if abs(v - round(v)) < 1e-6 else f"{v}"
-                parts.append(f"{v_str}f" if numeric_prefix else f"f{v_str}")  # <<< here
+                parts.append(f"{v_str}{f_unit}" if numeric_prefix else f"{'f'}{v_str}")
             else:
                 parts.append(f"{t[0]}{int(t[1])}")
         return " ".join(parts)
