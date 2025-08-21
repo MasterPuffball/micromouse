@@ -131,8 +131,8 @@ struct Robot {
     // runScript("f101 r22 f3 r68 l90 f1 r10 f2");
 
     exploreMap();
-    // mapRenderer.drawMap();
-      // while (true) {}
+    // mapRenderer.drawM
+     {}
   }
 
   void initScreen() {
@@ -286,6 +286,38 @@ struct Robot {
       }
 
       if (front_lidar.get_dist() < 75) {
+        break;
+      }
+    }
+
+    left_wheel.setSpeed(0);
+    right_wheel.setSpeed(0);
+  }
+
+  void moveForwardNon90Distance(uint16_t dist, float speed) {
+    // Set to stay in the current direction
+    float startDirection = imu.getDirection();
+    direction_controller.zeroAndSetTarget(startDirection, startDirection);
+
+    // Set the wheels to go forward dist
+    left_controller.zeroAndSetTarget(left_wheel.getDistanceMoved(), dist);
+    right_controller.zeroAndSetTarget(right_wheel.getDistanceMoved(), dist);
+
+    long startTime = millis();
+
+    while (true) {
+      // drawTelemetry(left_controller);
+      float directionalAdjustment = direction_controller.compute(imu.getDirection());
+      float leftSignal = left_controller.compute(left_wheel.getDistanceMoved());
+      float rightSignal = right_controller.compute(right_wheel.getDistanceMoved());
+
+      float leftMotorSignal = (constrain(leftSignal, -100, 100) + (directionalAdjustment * DIRECTION_BIAS_STRENGTH)) * speed;
+      float rightMotorSignal = (constrain(rightSignal, -100, 100) - (directionalAdjustment * DIRECTION_BIAS_STRENGTH)) * speed;
+
+      left_wheel.setSpeed(leftMotorSignal);
+      right_wheel.setSpeed(rightMotorSignal);
+
+      if ((direction_controller.isWithin(10) && left_controller.isWithin(DIST_TOLERANCE) && right_controller.isWithin(DIST_TOLERANCE)) || millis() - startTime > MAX_DURATION) {
         break;
       }
     }
@@ -485,7 +517,11 @@ struct Robot {
   }
 
   void moveForwardOneCell() {
-    moveForwardDistance(200.0, general_speed); ///////////////////////////////////////////////////////////////////////////// CHANGE THIS ABCK TO 180
+    moveForwardDistance(180.0, general_speed); ///////////////////////////////////////////////////////////////////////////// CHANGE THIS ABCK TO 180
+  }
+
+  void moveForwardNon90OneCell() {
+    moveForwardNon90Distance(180.0, general_speed);
   }
 
   // Right = positive angle here
@@ -520,7 +556,7 @@ struct Robot {
     switch (movement) {
       case 'f':
         for (int i = 0; i < (int)value; i++) {
-          moveForwardOneCell();
+          moveForwardNon90OneCell();
           switch (robotOrientation) {
             case UP:    robotY -= 1; break;
             case RIGHT: robotX += 1; break;
