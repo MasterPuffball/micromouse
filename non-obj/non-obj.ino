@@ -485,7 +485,7 @@ struct Robot {
   }
 
   void moveForwardOneCell() {
-    moveForwardDistance(200.0, general_speed); ///////////////////////////////////////////////////////////////////////////// CHANGE THIS ABCK TO 180
+    moveForwardDistance(180.0, general_speed); ///////////////////////////////////////////////////////////////////////////// CHANGE THIS ABCK TO 180
   }
 
   // Right = positive angle here
